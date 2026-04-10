@@ -307,37 +307,42 @@ function togglePass() {
   }
 }
 
-// ===== 認証 =====
-async function doLogin() {
+// ===== 認証（シンプルパスワード方式） =====
+const PASSWORDS = {
+  'mail5@hisaizu.jp': 'pass1012',
+};
+const SESSION_KEY = 'hisaizu_session';
+
+function doLogin() {
   const email = document.getElementById('loginEmail').value.trim();
   const pass = document.getElementById('loginPass').value;
   const errEl = document.getElementById('loginError');
   errEl.textContent = '';
-  const { data, error } = await db.auth.signInWithPassword({ email, password: pass });
-  if (error) {
+  if (PASSWORDS[email] && PASSWORDS[email] === pass) {
+    sessionStorage.setItem(SESSION_KEY, email);
+    document.getElementById('loginScreen').classList.remove('show');
+    document.getElementById('logoutBtn').style.display = 'inline-block';
+    document.getElementById('info-user').textContent = email;
+    initDB();
+  } else {
     errEl.textContent = 'メールアドレスまたはパスワードが正しくありません';
-    return;
   }
-  document.getElementById('loginScreen').classList.remove('show');
-  document.getElementById('logoutBtn').style.display = 'inline-block';
-  document.getElementById('info-user').textContent = email;
-  await initDB();
 }
 
-async function doLogout() {
-  await db.auth.signOut();
+function doLogout() {
+  sessionStorage.removeItem(SESSION_KEY);
   document.getElementById('loginScreen').classList.add('show');
   document.getElementById('logoutBtn').style.display = 'none';
   document.getElementById('results').innerHTML = '';
 }
 
-async function checkSession() {
-  const { data: { session } } = await db.auth.getSession();
-  if (session) {
+function checkSession() {
+  const email = sessionStorage.getItem(SESSION_KEY);
+  if (email) {
     document.getElementById('loginScreen').classList.remove('show');
     document.getElementById('logoutBtn').style.display = 'inline-block';
-    document.getElementById('info-user').textContent = session.user.email;
-    await initDB();
+    document.getElementById('info-user').textContent = email;
+    initDB();
   }
 }
 
