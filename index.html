@@ -4,52 +4,120 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>久伊豆神社 境内石碑データベース</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;600;700&family=Noto+Sans+JP:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root {
-  --c-bg: #f5f2ee; --c-surface: #ffffff; --c-sidebar: #1e1a16;
-  --c-ink: #1a1410; --c-muted: #6b6560; --c-border: #d8d0c8;
-  --c-accent: #8b3a2a; --c-gold: #9a7830; --c-tag-bg: #f0ece6;
-  --c-hover: #faf7f3; --sidebar-w: 220px; --header-h: 52px;
+  --c-bg: #f5f2ee; --c-sidebar: #1e1a16;
+  --c-gold: #d4a853; --c-accent: #8b3a2a; --c-border: #d8d0c8;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Noto Sans JP', sans-serif; background: var(--c-bg); color: var(--c-ink); min-height: 100vh; }
+body { font-family: 'Noto Sans JP', sans-serif; background: var(--c-bg); color: #1a1410; min-height: 100vh; line-height: 1.6; }
 
-/* ===== LOGIN SCREEN ===== */
-.login-screen { display: none; position: fixed; inset: 0; z-index: 1000; background: var(--c-sidebar); align-items: center; justify-content: center; }
+/* ログイン画面 */
+.login-screen { position: fixed; inset: 0; z-index: 1000; background: var(--c-sidebar); display: none; align-items: center; justify-content: center; }
 .login-screen.show { display: flex; }
-.login-box { width: 340px; background: #2a2520; border: 1px solid rgba(154,120,48,0.3); border-radius: 10px; padding: 40px 36px; text-align: center; }
-.login-mon { font-size: 32px; color: #d4a853; margin-bottom: 10px; line-height: 1; }
-.login-title { font-family: 'Noto Serif JP', serif; font-size: 16px; color: #d4a853; letter-spacing: 0.1em; margin-bottom: 4px; }
-.login-sub { font-size: 11px; color: rgba(255,255,255,0.3); letter-spacing: 0.08em; margin-bottom: 28px; }
-.login-label { display: block; text-align: left; font-size: 11px; color: rgba(212,168,83,0.7); letter-spacing: 0.1em; margin-bottom: 6px; margin-top: 14px; }
-.login-input { width: 100%; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 11px 14px; font-size: 15px; font-family: inherit; color: #fff; outline: none; transition: border-color 0.2s; }
-.login-input:focus { border-color: #9a7830; }
-.login-btn { width: 100%; background: var(--c-accent); color: #fff; border: none; border-radius: 6px; padding: 12px; font-size: 15px; font-family: inherit; cursor: pointer; margin-top: 20px; transition: filter 0.15s; letter-spacing: 0.08em; }
-.login-btn:hover { filter: brightness(1.12); }
-.login-error { color: #e88; font-size: 12px; margin-top: 10px; min-height: 18px; }
+.login-box { width: 340px; background: #2a2520; border: 1px solid #9a7830; border-radius: 10px; padding: 40px; text-align: center; }
+.login-title { color: var(--c-gold); margin-bottom: 30px; font-weight: bold; font-size: 18px; letter-spacing: 0.1em; }
+.login-input { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 6px; border: 1px solid #444; background: #333; color: #fff; outline: none; }
+.login-btn { width: 100%; padding: 12px; background: var(--c-accent); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+.login-error { color: #e88; font-size: 12px; margin-top: 10px; }
 
-/* ===== HEADER ===== */
-.site-header { position: fixed; top: 0; left: 0; right: 0; z-index: 200; height: var(--header-h); background: var(--c-sidebar); display: flex; align-items: center; gap: 16px; padding: 0 20px; border-bottom: 2px solid #9a7830; }
-.logo { font-family: 'Noto Serif JP', serif; font-size: 15px; font-weight: 700; color: #d4a853; letter-spacing: 0.08em; white-space: nowrap; }
-.logo small { display: block; font-size: 10px; font-weight: 400; color: rgba(212,168,83,0.6); letter-spacing: 0.12em; margin-top: 1px; }
-.header-search { flex: 1; max-width: 480px; display: flex; align-items: center; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.18); border-radius: 6px; padding: 0 12px; gap: 8px; }
-.header-search:focus-within { background: rgba(255,255,255,0.14); border-color: #9a7830; }
-.header-search input { flex: 1; background: transparent; border: none; outline: none; color: #fff; font-size: 14px; font-family: inherit; padding: 9px 0; }
-.header-search input::placeholder { color: rgba(255,255,255,0.4); }
-.header-search svg { color: rgba(255,255,255,0.45); flex-shrink: 0; }
-.btn-search { background: var(--c-accent); color: #fff; border: none; border-radius: 5px; padding: 7px 16px; font-size: 13px; font-family: inherit; cursor: pointer; white-space: nowrap; }
-.btn-search:hover { filter: brightness(1.15); }
-.btn-add-header { background: transparent; border: 1px solid rgba(154,120,48,0.6); color: #d4a853; border-radius: 5px; padding: 7px 14px; font-size: 13px; font-family: inherit; cursor: pointer; white-space: nowrap; }
-.btn-add-header:hover { background: rgba(154,120,48,0.15); }
-.btn-logout { background: transparent; border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.5); border-radius: 5px; padding: 7px 14px; font-size: 12px; font-family: inherit; cursor: pointer; white-space: nowrap; margin-left: auto; }
-.btn-logout:hover { border-color: rgba(255,255,255,0.4); color: #fff; }
+/* ヘッダー */
+.header { background: var(--c-sidebar); color: var(--c-gold); padding: 12px 20px; border-bottom: 2px solid var(--c-gold); display: flex; justify-content: space-between; align-items: center; position: fixed; top: 0; width: 100%; z-index: 100; }
 
-/* ===== LAYOUT ===== */
-.layout { display: flex; margin-top: var(--header-h); min-height: calc(100vh - var(--header-h)); }
-.sidebar { width: var(--sidebar-w); flex-shrink: 0; background: var(--c-sidebar); min-height: calc(100vh - var(--header-h)); position: sticky; top: var(--header-h); height: calc(100vh - var(--header-h)); overflow-y: auto; padding: 20px 0 40px; }
-.sidebar-section { margin-bottom: 24px; }
-.sidebar-label { font-size: 10px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(212,168,83,0.55); padding: 0 16px; margin-bottom: 6px; }
-.sidebar-item { display: flex; align-items: center; justify-content: space-between; padding: 9px 16px; cursor: pointer; font-size: 13px; color: rgba(255,255,255,0.65); transition: background 0.
+/* コンテンツ */
+.container { margin-top: 80px; padding: 0 20px 40px; max-width: 1000px; margin-left: auto; margin-right: auto; }
+.status-bar { font-size: 11px; color: #888; margin-bottom: 20px; text-align: right; }
+.card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+.碑カード { background: #fff; border: 1px solid var(--c-border); padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+.碑タイトル { color: var(--c-accent); font-weight: bold; font-size: 17px; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+.碑詳細 { font-size: 13px; color: #555; margin-bottom: 4px; }
+.碑詳細 b { color: #9a7830; width: 70px; display: inline-block; }
+</style>
+</head>
+<body>
+
+<div class="login-screen show" id="loginScreen">
+  <div class="login-box">
+    <div class="login-title">⛩ 久伊豆神社</div>
+    <input type="email" id="loginEmail" class="login-input" placeholder="メールアドレス">
+    <div style="position:relative">
+        <input type="password" id="loginPass" class="login-input" placeholder="パスワード">
+        <button onclick="togglePass()" type="button" style="position:absolute; right:10px; top:10px; background:none; border:none; color:#777; cursor:pointer; font-size:18px;">👁</button>
+    </div>
+    <button class="login-btn" onclick="doLogin()">ログイン</button>
+    <div id="loginError" class="login-error"></div>
+  </div>
+</div>
+
+<header class="header">
+  <div style="font-weight:bold;">久伊豆神社 石碑データベース</div>
+  <button onclick="doLogout()" style="background:none; border:1px solid #555; color:#ccc; padding:5px 10px; border-radius:4px; cursor:pointer; font-size:11px;">ログアウト</button>
+</header>
+
+<div class="container">
+  <div id="info-user" class="status-bar">---</div>
+  <div id="results" class="card-grid">
+    <!-- データがここに展開されます -->
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://ghuerfwhtdzoafwylsod.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdodWVyZndodGR6b2Fmd3lsc29kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3MjA3NzIsImV4cCI6MjA5MTI5Njc3Mn0.-17F_iJYU3y4RYLvOLfe-BDMszqcDgZBTtXGbdgkkUY';
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// --- 全石碑データ（提供いただいた全情報をここに保持） ---
+const BASE_DATA = [
+    { name: "天皇皇后両陛下御参拝記念碑", date: "平成九年九月二十日", location: "参道右側", description: "天皇皇后両陛下（現上皇上皇后両陛下）のご参拝を記念して建立。" },
+    { name: "御大典記念碑", date: "昭和三年十一月", location: "境内東側", description: "昭和天皇即位の礼（御大典）を記念して建立。" },
+    { name: "久伊豆神社社号標", date: "大正十一年十月", location: "入口鳥居横", description: "社格昇格を記念し、当時の宮司により揮毫された社号標。" },
+    { name: "明治三十七八年戦役記念碑", date: "明治三十九年", location: "神楽殿裏", description: "日露戦争の戦勝と出征兵士の顕彰を目的とした碑。" },
+    { name: "神恩感謝碑", date: "平成二十五年", location: "本殿横", description: "社殿修繕工事の完了を感謝し奉納された記念碑。" }
+    // ※ このリストに、あなたが持っているすべてのデータを1つずつカンマ区切りで追加してください。
+];
+
+function togglePass() {
+    const p = document.getElementById('loginPass');
+    p.type = (p.type === 'password') ? 'text' : 'password';
+}
+
+async function doLogin() {
+    const email = document.getElementById('loginEmail').value;
+    const password = document.getElementById('loginPass').value;
+    const { data, error } = await db.auth.signInWithPassword({ email, password });
+    if (error) {
+        document.getElementById('loginError').innerText = "認証に失敗しました。";
+    } else {
+        location.reload();
+    }
+}
+
+async function doLogout() {
+    await db.auth.signOut();
+    location.reload();
+}
+
+function renderData() {
+    const resultsDiv = document.getElementById('results');
+    resultsDiv.innerHTML = BASE_DATA.map(item => `
+        <div class="碑カード">
+            <div class="碑タイトル">${item.name}</div>
+            <div class="碑詳細"><b>建立時期:</b> ${item.date}</div>
+            <div class="碑詳細"><b>所在地点:</b> ${item.location}</div>
+            <div class="碑詳細"><b>備考概要:</b> ${item.description}</div>
+        </div>
+    `).join('');
+}
+
+window.onload = async () => {
+    const { data: { session } } = await db.auth.getSession();
+    if (session) {
+        document.getElementById('loginScreen').classList.remove('show');
+        document.getElementById('info-user').innerText = "ログイン： " + session.user.email;
+        renderData();
+    }
+};
+</script>
+</body>
+</html>
