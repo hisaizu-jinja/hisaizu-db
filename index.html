@@ -155,6 +155,14 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--c-bg); color: 
     background: rgba(154,120,48,0.3);
     border-color: #9a7830; color: #d4a853;
   }
+  .record-close-btn {
+    display: block; width: 100%;
+    background: var(--c-tag-bg); border: none;
+    border-top: 1px solid var(--c-border);
+    padding: 12px; font-size: 13px;
+    color: var(--c-muted); cursor: pointer;
+    font-family: inherit; text-align: center;
+  }
 }
 @media (min-width: 641px) {
   .mobile-filter-bar { display: none; }
@@ -278,7 +286,7 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--c-bg); color: 
 
   <main class="main">
     <!-- スマホ用フィルターバー -->
-    <div class="mobile-filter-bar">
+    <div class="mobile-filter-bar" id="mobileFilterBar">
       <button class="mobile-filter-btn active" onclick="setCat('')" id="m-cat-all">すべて</button>
       <button class="mobile-filter-btn" onclick="setCat('記念碑・石碑')" id="m-cat-0">記念碑・石碑</button>
       <button class="mobile-filter-btn" onclick="setCat('記念碑（伊勢参拝記念）')" id="m-cat-1">伊勢参拝記念</button>
@@ -535,6 +543,7 @@ function render() {
         ${r.biko ? `<hr class="detail-sep"><div class="detail-full"><dt>備考・石工・寸法</dt><dd>${hl(r.biko, rawQ)}</dd></div>` : ''}
         <hr class="detail-sep">
         <div class="photo-section"><dt>写真</dt>${buildPhotoGrid(r)}</div>
+        <button class="record-close-btn" onclick="toggleRec(${r.id})">▲ 閉じる</button>
       </div>
     </div>`;
   }).join('');
