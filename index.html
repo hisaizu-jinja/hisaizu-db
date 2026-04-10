@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>久伊豆神社 境内石碑データベース</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;600;700&family=Noto+Sans+JP:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --c-bg: #f5f2ee; --c-surface: #ffffff; --c-sidebar: #1e1a16;
+  --c-ink: #1a1410; --c-muted: #6b6560; --c-border: #d8d0c8;
+  --c-accent: #8b3a2a; --c-gold: #9a7830; --c-tag-bg: #f0ece6;
+  --c-hover: #faf7f3; --sidebar-w: 220px; --header-h: 52px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Noto Sans JP', sans-serif; background: var(--c-bg); color: var(--c-ink); min-height: 100vh; }
+
+/* ===== LOGIN ===== */
+.login-screen { display: none; position: fixed; inset: 0; z-index: 1000; background: var(--c-sidebar); align-items: center; justify-content: center; }
+.login-screen.show { display: flex; }
+.login-box { width: 340px; background: #2a2520; border: 1px solid rgba(154,120,48,0.3); border-radius: 10px; padding: 40px 36px; text-align: center; }
+.login-mon { font-size: 32px; color: #d4a853; margin-bottom: 10px; line-height: 1; }
+.login-title { font-family: 'Noto Serif JP', serif; font-size: 16px; color: #d4a853; letter-spacing: 0.1em; margin-bottom: 4px; }
+.login-sub { font-size: 11px; color: rgba(255,255,255,0.3); letter-spacing: 0.08em; margin-bottom: 28px; }
+.login-label { display: block; text-align: left; font-size: 11px; color: rgba(212,168,83,0.7); letter-spacing: 0.1em; margin-bottom: 6px; margin-top: 14px; }
+.login-input { width: 100%; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 11px 14px; font-size: 15px; font-family: inherit; color: #fff; outline: none; transition: border-color 0.2s; }
+.login-input:focus { border-color: #9a7830; }
+.login-btn { width: 100%; background: var(--c-accent); color: #fff; border: none; border-radius: 6px; padding: 12px; font-size: 15px; font-family: inherit; cursor: pointer; margin-top: 20px; transition: filter 0.15s; letter-spacing: 0.08em; }
+.login-btn:hover { filter: brightness(1.12); }
+.login-error { color: #e88; font-size: 12px; margin-top: 10px; min-height: 18px; }
+
+/* ===== HEADER ===== */
+.site-header { position: fixed; top: 0; left: 0; right: 0; z-index: 200; height: var(--header-h); background: var(--c-sidebar); display: flex; align-items: center; gap: 16px; padding: 0 20px; border-bottom: 2px solid #9a7830; }
+.logo { font-family: 'Noto Serif JP', serif; font-size: 15px; font-weight: 700; color: #d4a853; letter-spacing: 0.08em; white-space: nowrap; }
+.logo small { display: block; font-size: 10px; font-weight: 400; color: rgba(212,168,83,0.6); letter-spacing: 0.12em; margin-top: 1px; }
+.header-search { flex: 1; max-width: 480px; display: flex; align-items: center; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.18); border-radius: 6px; padding: 0 12px; gap: 8px; }
+.header-search:focus-within { background: rgba(255,255,255,0.14); border-color: #9a7830; }
+.header-search input { flex: 1; background: transparent; border: none; outline: none; color: #fff; font-size: 14px; font-family: inherit; padding: 9px 0; }
+.header-search input::placeholder { color: rgba(255,255,255,0.4); }
+.header-search svg { color: rgba(255,255,255,0.45); flex-shrink: 0; }
+.btn-search { background: var(--c-accent); color: #fff; border: none; border-radius: 5px; padding: 7px 16px; font-size: 13px; font-family: inherit; cursor: pointer; white-space: nowrap; }
+.btn-search:hover { filter: brightness(1.15); }
+.btn-add-header { background: transparent; border: 1px solid rgba(154,120,48,0.6); color: #d4a853; border-radius: 5px; padding: 7px 14px; font-size: 13px; font-family: inherit; cursor: pointer; white-space: nowrap; }
+.btn-add-header:hover { background: rgba(154,120,48,0.15); }
+.btn-logout { background: transparent; border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.5); border-radius: 5px; padding: 7px 14px; font-size: 12px; font-family: inherit; cursor: pointer; white-space: nowrap; }
+.btn-logout:hover { border-color: rgba(255,255,255,0.4); color: #fff; }
+
+/* ===== LAYOUT ===== */
+.layout { display: flex; margin-top: var(--header-h); min-height: calc(100vh - var(--header-h)); }
+.sidebar { width: var(--sidebar-w); flex-shrink: 0; background: var(--c-sidebar); min-height: calc(100vh - var(--header-h)); position: sticky; top: var(--header-h); height: calc(100vh - var(--header-h)); overflow-y: auto; padding: 20px 0 40px; }
+.sidebar-section { margin-bottom: 24px; }
+.sidebar-label { font-size: 10px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(212,168,83,0.55); padding: 0 16px; margin-bottom: 6px; }
+.sidebar-item { display: flex; align-items: center; justify-content: space-between; padding: 9px 16px; cursor: pointer; font-size: 13px; color: rgba(255,255,255,0.65); transition: background 0.15s, color 0.15s; border-left: 3px solid transparent; }
+.sidebar-item:hover { background: rgba(255,255,255,0.06); color: #fff; }
+.sidebar-item.active { background: rgba(154,120,48,0.18); color: #d4a853; border-left-color: #9a7830; }
+.sidebar-item .cnt { background: rgba(255,255,255,0.12); border-radius: 10px; padding: 1px 7px; font-size: 11px; color: rgba(255,255,255,0.5); }
+.sidebar-item.active .cnt { background: rgba(154,120,48,0.3); color: #d4a853; }
+.sidebar-divider { height: 1px; background: rgba(255,255,255,0.07); margin: 8px 16px; }
+.sidebar-sort { padding: 4px 16px; }
+.sidebar-sort select { width: 100%; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.14); border-radius: 5px; padding: 7px 10px; font-size: 12px; font-family: inherit; color: rgba(255,255,255,0.7); cursor: pointer; outline: none; }
+.sidebar-info { padding: 0 16px; }
+.info-row { display: flex; justify-content: space-between; align-items: baseline; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.info-row:last-child { border-bottom: none; }
+.info-label { font-size: 11px; color: rgba(255,255,255,0.4); }
+.info-val { font-size: 12px; color: rgba(255,255,255,0.7); text-align: right; }
+
+/* ===== MAIN ===== */
+.main { flex: 1; min-width: 0; }
+.results-bar { padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--c-border); background: var(--c-surface); font-size: 13px; color: var(--c-muted); position: sticky; top: var(--header-h); z-index: 100; }
+.badge-filter { background: var(--c-accent); color: #fff; border-radius: 4px; padding: 2px 8px; font-size: 11px; }
+.sync-badge { font-size: 11px; padding: 2px 8px; border-radius: 4px; }
+.sync-ok { background: #e8f5e9; color: #2e7d32; }
+.sync-err { background: #fdecea; color: #c62828; }
+.sync-loading { background: #fff8e1; color: #f57f17; }
+
+/* ===== RECORDS ===== */
+.record-list { padding: 0; }
+.record { border-bottom: 1px solid var(--c-border); background: var(--c-surface); transition: background 0.12s; }
+.record:hover { background: var(--c-hover); }
+.record-head { display: flex; align-items: flex-start; gap: 14px; padding: 14px 20px; cursor: pointer; }
+.record-num { flex-shrink: 0; font-size: 11px; color: var(--c-muted); padding-top: 3px; min-width: 28px; text-align: right; }
+.record-body { flex: 1; min-width: 0; }
+.record-title { font-family: 'Noto Serif JP', serif; font-size: 17px; font-weight: 600; color: var(--c-ink); line-height: 1.4; margin-bottom: 6px; letter-spacing: 0.03em; }
+.record-meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.tag { display: inline-flex; align-items: center; border-radius: 2px; padding: 2px 8px; font-size: 11px; font-weight: 500; white-space: nowrap; letter-spacing: 0.06em; }
+.tag-year { background: transparent; color: var(--c-muted); border: 1px solid var(--c-border); }
+.tag-cat-記念碑・石碑 { background: transparent; color: #2a5a28; border: 1px solid #b0d4b0; }
+.tag-cat-記念碑（伊勢参拝記念） { background: transparent; color: #7a4010; border: 1px solid #e0c090; }
+.tag-cat-燈篭 { background: transparent; color: #6a5800; border: 1px solid #dcd090; }
+.tag-cat-狛犬 { background: transparent; color: #2a2a9a; border: 1px solid #a8a8e0; }
+.tag-cat-鳥居・社号標 { background: transparent; color: #7a1818; border: 1px solid #e0a8a8; }
+.tag-place { background: transparent; color: var(--c-muted); border: none; font-size: 12px; padding: 0; }
+.tag-place::before { content: "—"; margin-right: 4px; color: var(--c-border); }
+.tag-photo { background: transparent; color: var(--c-muted); border: 1px solid var(--c-border); font-size: 11px; }
+.record-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; opacity: 0; transition: opacity 0.15s; }
+.record:hover .record-actions { opacity: 1; }
+.act { border: 1px solid var(--c-border); background: #fff; border-radius: 4px; padding: 5px 12px; font-size: 12px; cursor: pointer; font-family: inherit; color: var(--c-muted); transition: all 0.12s; white-space: nowrap; }
+.act:hover { border-color: var(--c-ink); color: var(--c-ink); background: var(--c-tag-bg); }
+.act.print:hover { border-color: #2a6; color: #2a6; }
+.act.del:hover { border-color: var(--c-accent); color: var(--c-accent); }
+.record-expand { flex-shrink: 0; color: var(--c-muted); transition: transform 0.2s; align-self: center; }
+.record.open .record-expand { transform: rotate(180deg); }
+.record-detail { display: none; border-top: 1px solid var(--c-border); background: #fdfcfa; padding: 16px 20px 16px 62px; }
+.record.open .record-detail { display: block; }
+.detail-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 14px; }
+.detail-field dt { font-size: 11px; font-weight: 500; letter-spacing: 0.1em; color: var(--c-gold); margin-bottom: 3px; text-transform: uppercase; }
+.detail-field dd { font-size: 14px; line-height: 1.7; color: var(--c-ink); white-space: pre-line; }
+.detail-sep { border: none; border-top: 1px solid var(--c-border); margin: 10px 0; }
+.detail-full dt { font-size: 11px; font-weight: 500; letter-spacing: 0.1em; color: var(--c-gold); margin-bottom: 4px; text-transform: uppercase; }
+.detail-full dd { font-size: 14px; line-height: 1.8; color: var(--c-muted); white-space: pre-line; }
+.detail-full + .detail-full { margin-top: 10px; }
+
+/* ===== PHOTOS ===== */
+.photo-section { margin-top: 12px; }
+.photo-section dt { font-size: 11px; font-weight: 500; letter-spacing: 0.1em; color: var(--c-gold); margin-bottom: 8px; text-transform: uppercase; }
+.photo-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.photo-thumb { position: relative; width: 100px; height: 100px; border-radius: 4px; overflow: hidden; border: 1px solid var(--c-border); cursor: pointer; }
+.photo-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.photo-thumb .del-photo { position: absolute; top: 3px; right: 3px; background: rgba(0,0,0,0.5); color: #fff; border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 10px; cursor: pointer; opacity: 0; transition: opacity 0.15s; display: flex; align-items: center; justify-content: center; }
+.photo-thumb:hover .del-photo { opacity: 1; }
+.photo-add { width: 100px; height: 100px; border: 1px dashed var(--c-border); border-radius: 4px; background: var(--c-tag-bg); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: var(--c-muted); font-size: 11px; transition: border-color 0.15s; }
+.photo-add:hover { border-color: var(--c-gold); color: var(--c-gold); }
+.photo-add span { font-size: 20px; }
+
+/* ===== MISC ===== */
+.hl { background: rgba(154,120,48,0.22); border-radius: 2px; padding: 0 1px; }
+.empty { text-align: center; padding: 80px 20px; color: var(--c-muted); }
+.empty big { font-size: 36px; display: block; margin-bottom: 12px; }
+.lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.88); z-index: 500; align-items: center; justify-content: center; }
+.lightbox.open { display: flex; }
+.lightbox img { max-width: 90vw; max-height: 90vh; border-radius: 6px; }
+.lightbox-close { position: absolute; top: 16px; right: 20px; color: #fff; font-size: 28px; cursor: pointer; background: none; border: none; }
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 400; align-items: center; justify-content: center; padding: 16px; }
+.modal-overlay.open { display: flex; }
+.modal { background: #fff; border-radius: 10px; width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto; box-shadow: 0 24px 64px rgba(0,0,0,0.25); }
+.modal-head { padding: 18px 20px 14px; border-bottom: 1px solid var(--c-border); display: flex; justify-content: space-between; align-items: center; }
+.modal-head h2 { font-family: 'Noto Serif JP', serif; font-size: 17px; font-weight: 700; }
+.modal-close { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--c-muted); padding: 2px 6px; border-radius: 4px; }
+.modal-close:hover { background: var(--c-tag-bg); }
+.modal-body { padding: 16px 20px; }
+.modal-foot { padding: 12px 20px; border-top: 1px solid var(--c-border); display: flex; justify-content: flex-end; gap: 8px; }
+.form-row { margin-bottom: 12px; }
+.form-row label { display: block; font-size: 11px; font-weight: 500; color: var(--c-gold); margin-bottom: 4px; letter-spacing: 0.08em; }
+.form-row input, .form-row select, .form-row textarea { width: 100%; border: 1px solid var(--c-border); border-radius: 6px; padding: 9px 12px; font-size: 14px; font-family: inherit; background: #fff; color: var(--c-ink); outline: none; transition: border-color 0.2s; }
+.form-row input:focus, .form-row select:focus, .form-row textarea:focus { border-color: var(--c-gold); }
+.form-row textarea { resize: vertical; min-height: 70px; line-height: 1.7; }
+.form-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.btn-save { background: var(--c-accent); color: #fff; border: none; border-radius: 6px; padding: 9px 20px; font-size: 14px; font-family: inherit; cursor: pointer; }
+.btn-save:hover { filter: brightness(1.1); }
+.btn-cancel { background: transparent; border: 1px solid var(--c-border); border-radius: 6px; padding: 9px 16px; font-size: 14px; font-family: inherit; cursor: pointer; color: var(--c-muted); }
+.btn-cancel:hover { border-color: var(--c-ink); color: var(--c-ink); }
+.toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(60px); background: #1a1410; color: #fff; padding: 10px 22px; border-radius: 24px; font-size: 13px; transition: transform 0.25s; z-index: 600; white-space: nowrap; }
+.toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- ログイン画面 -->
+<div class="login-screen show" id="loginScreen">
+  <div class="login-box">
+    <div class="login-mon">⛩</div>
+    <div class="login-title">久伊豆神社</div>
+    <div class="login-sub">境内石碑・記念碑 データベース</div>
+    <label class="login-label">メールアドレス</label>
+    <input type="email" class="login-input" id="loginEmail" placeholder="メールアドレスを入力">
+    <label class="login-label">パスワード</label>
+    <div style="position:relative">
+      <input type="password" class="login-input" id="loginPass" placeholder="パスワードを入力" onkeydown="if(event.key==='Enter')doLogin()" style="padding-right:44px">
+      <button onclick="togglePass()" type="button" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:rgba(255,255,255,0.5);font-size:16px" id="togglePassBtn">👁</button>
+    </div>
+    <button class="login-btn" onclick="doLogin()">ログイン</button>
+    <div class="login-error" id="loginError"></div>
+  </div>
+</div>
+
+<!-- メイン画面 -->
+<header class="site-header">
+  <div class="logo">久伊豆神社<small>境内石碑・記念碑 データベース</small></div>
+  <div class="header-search">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input type="text" id="searchInput" placeholder="名称・人物名・場所・銘文で検索…" onkeydown="if(event.key==='Enter')render()">
+  </div>
+  <button class="btn-search" onclick="render()">検索</button>
+  <button class="btn-add-header" onclick="openModal()">＋ 新規追加</button>
+  <button class="btn-logout" onclick="doLogout()" id="logoutBtn" style="display:none">ログアウト</button>
+</header>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">種類で絞り込み</div>
+      <div class="sidebar-item active" onclick="setCat('')" id="cat-all">すべて <span class="cnt" id="cnt-all">0</span></div>
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-item" onclick="setCat('記念碑・石碑')" id="cat-0">記念碑・石碑 <span class="cnt" id="cnt-0">0</span></div>
+      <div class="sidebar-item" onclick="setCat('記念碑（伊勢参拝記念）')" id="cat-1">伊勢参拝記念 <span class="cnt" id="cnt-1">0</span></div>
+      <div class="sidebar-item" onclick="setCat('燈篭')" id="cat-2">燈篭 <span class="cnt" id="cnt-2">0</span></div>
+      <div class="sidebar-item" onclick="setCat('狛犬')" id="cat-3">狛犬 <span class="cnt" id="cnt-3">0</span></div>
+      <div class="sidebar-item" onclick="setCat('鳥居・社号標')" id="cat-4">鳥居・社号標 <span class="cnt" id="cnt-4">0</span></div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">時代で絞り込み</div>
+      <div class="sidebar-item" onclick="setJidai('')" id="era-all">すべての時代</div>
+      <div class="sidebar-item" onclick="setJidai('江戸時代')" id="era-0">江戸時代</div>
+      <div class="sidebar-item" onclick="setJidai('明治')" id="era-1">明治</div>
+      <div class="sidebar-item" onclick="setJidai('大正')" id="era-2">大正</div>
+      <div class="sidebar-item" onclick="setJidai('昭和')" id="era-3">昭和</div>
+      <div class="sidebar-item" onclick="setJidai('平成以降')" id="era-4">平成以降</div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">並び順</div>
+      <div class="sidebar-sort">
+        <select id="sortFilter" onchange="render()">
+          <option value="year_asc">古い順</option>
+          <option value="year_desc">新しい順</option>
+          <option value="name">名称順</option>
+        </select>
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">データベース情報</div>
+      <div class="sidebar-info">
+        <div class="info-row"><span class="info-label">総件数</span><span class="info-val" id="info-total">—</span></div>
+        <div class="info-row"><span class="info-label">最終更新</span><span class="info-val" id="info-updated">—</span></div>
+        <div class="info-row"><span class="info-label">ログイン中</span><span class="info-val" id="info-user" style="font-size:10px">—</span></div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="results-bar">
+      <span><strong id="countNum">0</strong> 件</span>
+      <span id="filterBadge" class="badge-filter" style="display:none">絞り込み中</span>
+      <span id="syncStatus" class="sync-badge sync-loading">読み込み中…</span>
+    </div>
+    <div class="record-list" id="results"></div>
+  </main>
+</div>
+
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+  <img id="lightboxImg" src="">
+</div>
+
+<div class="modal-overlay" id="modalOverlay" onclick="closeModalIfBg(event)">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="modalTitle">新規追加</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-2col">
+        <div class="form-row"><label>西暦</label><input type="number" id="f_year" placeholder="例：1800"></div>
+        <div class="form-row"><label>和暦・成立時代</label><input type="text" id="f_nendo" placeholder="例：1800（寛政12）"></div>
+      </div>
+      <div class="form-2col">
+        <div class="form-row"><label>種類</label>
+          <select id="f_category">
+            <option>記念碑・石碑</option><option>記念碑（伊勢参拝記念）</option>
+            <option>燈篭</option><option>狛犬</option><option>鳥居・社号標</option>
+          </select>
+        </div>
+        <div class="form-row"><label>時代区分</label>
+          <select id="f_jidai">
+            <option value="">（自動）</option><option>江戸時代</option><option>明治</option>
+            <option>明治時代</option><option>大正</option><option>昭和</option><option>平成以降</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row"><label>名称 ＊</label><input type="text" id="f_name" placeholder="例：常夜燈"></div>
+      <div class="form-row"><label>場所</label><input type="text" id="f_basho" placeholder="例：手水舎近く"></div>
+      <div class="form-row"><label>銘文</label><textarea id="f_mei" rows="3" placeholder="碑に刻まれた文字"></textarea></div>
+      <div class="form-row"><label>奉納者・関係者</label><textarea id="f_honou" rows="3" placeholder="奉納者、石工、寄付者など"></textarea></div>
+      <div class="form-row"><label>備考・寸法</label><textarea id="f_biko" rows="2" placeholder="寸法、現在の状態など"></textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-cancel" onclick="closeModal()">キャンセル</button>
+      <button class="btn-save" onclick="saveRecord()">保存する</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://ghuerfwhtdzoafwylsod.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdodWVyZndodGR6b2Fmd3lsc29kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3MjA3NzIsImV4cCI6MjA5MTI5Njc3Mn0.-17F_iJYU3y4RYLvOLfe-BDMszqcDgZBTtXGbdgkkUY';
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const BASE_DATA = [{"sheet":"記念碑（その他）","category":"記念碑・石碑","year":0,"nendo":"不明","jidai":"","name":"諸社諸神","mei":"石尊大権現　大天狗　小天狗","basho":"榛名神社そば","honou":"","biko":"※石尊大権現とは\n神奈川県伊勢原市の大山信仰を指す 寸法:(寸法)本塔上40×24×5\n　　　台石上14×33×20\n(形態)片岩"},{"sheet":"記念碑（その他）","category":"記念碑・石碑","year":0,"nendo":"不明","jidai":"","name":"手水石","mei":"恭献","basho":"榛名神社そば","honou":"村田氏","biko":" 寸法:(寸法)本塔上33×60×30\n(形態)角型"},{"sheet":"記念碑（その他）","category":"記念碑・石碑","year":1686,"nendo":"1686（貞享3）","jidai":"江戸時代","name":"手洗石","mei":"奉納石手洗鉢\n市宿町　貞享三丙寅年九月十九日","basho":"新社務所裏庭","honou":"市宿町","biko":"※現在は平成18年竣工の新社務所の裏庭に設置 寸法:(寸法)本塔上56×96×60　(形態)角型"},{"sheet":"記念碑（その他）","category":"記念碑・石碑","year":1740,"nendo":"1740（元文5）","jidai":"江戸時代","name":"力石","mei":"奉納力石三十六貫□□　\n元文五庚申年　渋江町☐","basho":"健育塚そば","honou":"渋江町","biko":"３６貫→１３５キロ\n※力石とは力だめし，力比べをする石のことで、主に卵形の自然石を用いる。持上げた記念として姓名や重量などを石に刻んで神社に奉納する風習があった 寸法:(寸法)上45×37×26　(形態)自然石"},{"sheet":"記念碑（その他）","category":"記念碑・石碑","year":1761,"nendo":"1761（宝暦11）","jidai":"江戸時代","name":"供養塔","mei":"奉納\n敷石諸願成就如意満足所　\n九月吉祥☐\n宝暦十一辛巳年","basho":"スロープ上","honou":"久保宿町\n願主　泉屋源","biko":"拝殿へ行く敷石を諸願成就の為奉納した。その時の記念の供養塔である。 寸法:(寸法)本塔上65×14×14　　(形態)山状角柱"},{"sheet":"記念碑（その他）","category":"記念碑・石碑","year":1774,"nendo":"1774（安永3）","jidai":"江戸時代","name":"手洗石","mei":"奉納御宝前　岩槻横町　施主吉井晋人\n安永三甲午年四月吉祥日","basho":"旧社務所庭","honou":"岩槻横町\n施主吉井普人","biko":" 寸法:(寸法)31×62×62　(形態)角柱"},{"sheet":"記念碑（その他）","category":"記念碑・石碑","year":1777,"nendo":"1777(安永6)","jidai":"江戸時代","name":"常夜燈","mei":"奉献御神宝前　岩槻町惣氏子中　安永六丁目","basho":"階段横","honou":"市宿町　石工　荻原利兵衛　※萩原電気の祖先","biko":" 寸法:(寸法)本塔上173×65×64　台石①18×80×78　②上21×105×104　(形態)燈籠型"},{"sheet":"燈篭","category":"燈篭","year":1777,"nendo":"1777（安永6年）\n丁酉年12月吉日","jidai":"江戸時代","name":"常夜燈","mei":"奉献御宝前\n岩槻町惣氏子中　安永六酉年十二月吉日","basho":"手水舎近く（5）","honou":"岩槻町惣氏子中","biko":"市宿町\n萩原利兵衛\n（萩原電機の祖先） 寸法:本塔173×65×64　台石18×80×78　上21×105×104"},{"sheet":"記念碑（その他）","category":"記念碑・石碑","year":1805,"nendo":"1805（文化2）","jidai":"江戸時代","name":"猿田彦大神","mei":"文化二乙丑年四月吉日　猿田彦太神　渋江町講中","basho":"二ノ鳥居そば","honou":"渋江町・田中町","biko":"渋江の鳥居のところにあったものを昭和に入り移動した。 寸法:(寸法)本塔88×33×32　台石上28×55×52　(形態)山状角柱"},{"sheet":"記念碑（その他）","category":"記念碑・石碑","year":1811,"nendo":"1811（文化8）","jidai":"江戸時代","name":"井戸枠","mei":"久保宿街乃民　神井を記す　文化八年春　林元龍謹撰","basho":"拝殿前","honou":"久保宿町講中　斉藤平兵衛　大河内半兵衛ほか三十五名","biko":"林元龍　謹撰 寸法:(寸法)53×76×76"},{"sheet":"燈篭","category":"燈篭","year":1839,"nendo":"1839（天保10年）\n9月","jidai":"江戸時代","name":"常夜燈","mei":"奉献御神燈\n伊勢太々講連中","basho":"枯山水前　右（８）","honou":"市宿町　勝田九郎左衛門ほか","biko":" 寸法:本塔221×84×84　台石①18×89×90②62×112×113"},{"sheet":"燈篭","category":"燈篭","year":1847,"nendo":"1847（弘化4年）\n5月","jidai":"江戸時代","name":"燈篭","mei":"","basho":"枯山水前　左（８´）","honou":"","biko":""},{"sheet":"燈篭","category":"燈篭","year":1848,"nendo":"1848（嘉永元年）\n9月吉日","jidai":"江戸時代","name":"常夜燈","mei":"伊勢太々講","basho":"庚申社傍（９）","honou":"久保宿町　八百屋喜八ほか","biko":" 寸法:本塔215×70×70　台石①19×178×89②75×212×120"},{"sheet":"燈篭","category":"燈篭","year":1857,"nendo":"1857（安政4年）\n8月吉辰","jidai":"江戸時代","name":"常夜燈","mei":"伊勢太々講","basho":"庚申社傍（10）","honou":"市宿街　油屋近蔵ほか","biko":"石屋忠右衛門"},{"sheet":"記念碑（その他）","category":"記念碑・石碑","year":1863,"nendo":"1863（文久3）","jidai":"江戸時代","name":"記念碑","mei":"賽神碑　祭饌会の記念碑","basho":"階段横","honou":"発起　中島徳左衛門　百間屋長兵衛ほか","biko":"仏眼山人撰ならび篆額"},{"sheet":"燈篭","category":"燈篭","year":1863,"nendo":"1863（文久3年）\n1月吉日\n（A）","jidai":"江戸時代","name":"常夜燈","mei":"伊勢太々講","basho":"階段上（12）","honou":"市宿街　河野太右衛門ほか","biko":"石は四国のまんなり石 寸法:本塔216×74×74"},{"sheet":"記念碑（その他）","category":"記念碑・石碑","year":1878,"nendo":"1878（明治11）\n戊寅年9月19日","jidai":"明治時代","name":"手洗石","mei":"奉納","basho":"手水舎","honou":"伊勢太々講　武州岩槻町　秋森喜兵衛ほか","biko":"高橋泥舟　書\n石工　栗原禎次郎\n※幕末の三舟の一人（勝海舟・山岡鉄舟）"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1887,"nendo":"1887（明治20）","jidai":"明治","name":"伊勢太々連","mei":"伊勢太々連","basho":"絵馬掛け横","honou":"伊勢太々連　岩槻町","biko":"中根半嶺　書\n石工　橋本兼吉・栗原石光馨"},{"sheet":"記念碑（その他）","category":"記念碑・石碑","year":1893,"nendo":"1893（明治26）\n7月20日","jidai":"明治時代","name":"諸社諸神","mei":"雷電社","basho":"榛名神社そば","honou":"小島代吉・忠太郎","biko":"※雷電神社（本宮は群馬県板倉町） 寸法:(寸法)68×21×11"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1895,"nendo":"1895（明治28）\n4月","jidai":"明治","name":"奉納　畑三畝歩","mei":"奉納\n畑三畝歩(せぶ)\n伊勢代々","basho":"保育園そば","honou":"岩槻町　鈴木源兵衛ほか","biko":"三畝歩＝90坪"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1896,"nendo":"1896（明治29）\n12月","jidai":"明治","name":"従軍紀念碑","mei":"従軍紀念碑","basho":"忠魂碑前","honou":"岩槻町従軍者建之","biko":"日清戦争の記念"},{"sheet":"鳥居・社号標","category":"鳥居・社号標","year":1896,"nendo":"１８９６（明治29）","jidai":"明治","name":"渋江鳥居","mei":"奉納","basho":"渋江の入り口","honou":"伊勢太々講","biko":"平成13年頃取り外した。台座は新社務所の裏庭に使用。"},{"sheet":"鳥居・社号標","category":"鳥居・社号標","year":1896,"nendo":"１８９６（明治29）","jidai":"明治","name":"鳥居連名碑","mei":"奉納　鳥居連名碑","basho":"駐車場（18）","honou":"伊勢太々講　齋藤秀栄ほか","biko":""},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1897,"nendo":"1897（明治30）\n9月","jidai":"明治","name":"奉納　伊勢太々講中","mei":"奉納\n伊勢太々講中","basho":"本殿","honou":"伊勢太々講","biko":""},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1900,"nendo":"1900（明治33）\n9月19日","jidai":"明治","name":"伊勢大々百名講社","mei":"伊勢大々\n百名講社","basho":"二ノ鳥居","honou":"伊勢大々 百名講社　明治三十三年九月十九日建之","biko":"題篆　司法大臣清浦圭吾\n書　貴族院議員野口褧\n刻字　栗原貞次郎　田中忠次郎"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1900,"nendo":"1900（明治33）","jidai":"明治","name":"金五拾円　永代太々御神楽料","mei":"金五拾円　永代太々御神楽料　伊勢太々連","basho":"スロープ上","honou":"伊勢太々連　鈴木平吉ほか","biko":"石工　田中忠次郎"},{"sheet":"燈篭","category":"燈篭","year":1900,"nendo":"1900（明治33年）\n9月19日","jidai":"明治","name":"燈篭","mei":"伊勢太々百名講","basho":"二ノ鳥居そば（20）","honou":"伊勢太々百名講","biko":"貴族院議員野口褧書 寸法:本塔310×101×101　形態：燈篭型"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1902,"nendo":"1902（明治35）\n9月19日","jidai":"明治","name":"奉納　畑地壱段歩","mei":"奉納　畑地壱段歩","basho":"神楽殿裏手","honou":"旧横町　四代目　鈴木佐五兵衛","biko":"壱段＝300坪"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1906,"nendo":"1906（明治39）\n9月19日","jidai":"明治","name":"奉納　畑参畝歩","mei":"奉納　畑参畝歩\n伊勢太々講","basho":"保育園そば","honou":"旧渋江講中","biko":"三畝歩＝90坪"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1906,"nendo":"1906（明治39）\n10月19日","jidai":"明治","name":"明治三十七八年戦役従軍紀念碑","mei":"明治三十七八年戦役従軍紀念碑","basho":"忠魂碑前","honou":"従軍者　井野彌太郎ほか","biko":"明治三十七八年戦役＝日露戦争"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1910,"nendo":"1910（明治43）\n1月","jidai":"明治","name":"畑壱反拾四歩","mei":"畑壱反拾四歩\n外に杉苗壱千本","basho":"保育園そば","honou":"伊勢太々講","biko":"明治43年　第57回式年遷宮"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1910,"nendo":"1910（明治43）\n4月19日","jidai":"明治","name":"国有林払下紀念碑","mei":"国有林払下紀念碑","basho":"梅林","honou":"久伊豆社氏子中","biko":"鐫工　田中忠次郎"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1910,"nendo":"1910（明治43）\n5月8日","jidai":"明治","name":"奉納伊勢太々連　山林弐畝弐拾三歩","mei":"奉納伊勢太々連\n山林弐畝弐拾三歩","basho":"","honou":"伊勢太々連","biko":"山林83坪"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1914,"nendo":"1914（大正3）記念碑","jidai":"大正","name":"奉納神鏡　大山敬慎講","mei":"奉納神鏡\n大山敬慎講","basho":"","honou":"多数の寄付者氏名記載","biko":"(寸法)本塔130×89×13"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1915,"nendo":"1915（大正4）記念碑","jidai":"大正","name":"御大典記念（大正天皇）奉納五葉松弐樹","mei":"御大典記念(大正天皇)　奉納五葉松弐樹","basho":"","honou":"世話人　加藤喜太郎ほか","biko":"大正４年拝殿造営"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1915,"nendo":"1915（大正4）記念碑","jidai":"大正","name":"奉納　一金弐百円　伊勢太々講","mei":"奉納　一金弐百円　大正４年11月　伊勢太々講","basho":"","honou":"石田永吉ほか","biko":"(寸法)本塔141×73×12"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1916,"nendo":"1916（大正5）記念碑","jidai":"大正","name":"日露戦役紀念碑","mei":"日露戦役紀念碑\n陸軍大将寺内正毅書","basho":"","honou":"賛成者・分会員多数記載","biko":"岩槻小学校より移設"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1917,"nendo":"1917（大正6）記念碑","jidai":"大正","name":"奉納　畑五畝拾七歩　大山登山紀念岩千人講","mei":"奉納　畑五畝拾七歩(百六十七坪)\n大山登山紀念岩千人講","basho":"","honou":"五部構成　大人数の寄付者氏名記載","biko":"石工：田中忠次郎"},{"sheet":"燈篭","category":"燈篭","year":1918,"nendo":"1918（大正7年）\n（B）","jidai":"大正","name":"燈篭","mei":"奉献　大正七年四月\n伊勢参拝紀念","basho":"階段上　右（36）","honou":"下村喜兵衛ほか","biko":" 寸法:本塔264×84×84"},{"sheet":"記念碑（その他）","category":"記念碑・石碑","year":1920,"nendo":"1920（大正9）","jidai":"","name":"諸社諸神","mei":"白山神社","basho":"榛名神社そば","honou":"神田榮吉","biko":"※白山比咩神社（本宮：石川県白山市）"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1921,"nendo":"1921（大正10）記念碑","jidai":"大正","name":"奉献　金壱百円　永代神楽料","mei":"奉献　金壱百円\n永代神楽料　大正十年十二月十五日","basho":"","honou":"奥野木七右衛門ほか","biko":"(寸法)本塔149×64×12"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1922,"nendo":"1922（大正11）記念碑","jidai":"大正","name":"奉納　金壱百円","mei":"奉納　金壱百円\n伊勢太々講　大正十一年三月十五日","basho":"","honou":"石川次兵衛ほか","biko":""},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1922,"nendo":"1922（大正11）記念碑","jidai":"大正","name":"奉納　一金壱百円　永代神楽料","mei":"奉納　一金壱百円\n永代神楽料　大正十一年六月十五日","basho":"神札所横","honou":"堀口定吉ほか","biko":""},{"sheet":"狛犬","category":"狛犬","year":1922,"nendo":"1922（大正11年）","jidai":"大正","name":"狛犬","mei":"奉納\n伊勢太々連","basho":"二ノ鳥居前（41）","honou":"柏崎村大字加倉ほか","biko":"石工：田中忠次郎\n現存する狛犬では一番古い"},{"sheet":"記念碑（その他）","category":"記念碑・石碑","year":1924,"nendo":"1924（大正13）\n2月佳辰","jidai":"","name":"玉垣","mei":"皇太子殿下御成婚記念（昭和天皇）\n大正13年1月26日","basho":"","honou":"貴族院議員　齋藤善八","biko":"石工師　田中忠次郎"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1924,"nendo":"1924（大正13）記念碑","jidai":"大正","name":"大正三年乃至九年戦役記念碑","mei":"大正三年乃至九年戦役記念碑(42)\n陸軍砲兵大佐二味篆書","basho":"孔雀小屋横","honou":"寄付者・出征者多数記載","biko":"第一次世界大戦に参戦"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1925,"nendo":"1925（大正14）記念碑","jidai":"大正","name":"鳥居建立紀念碑","mei":"鳥居建立紀念碑(44)","basho":"石段脇","honou":"長谷川宗七ほか","biko":"奉納された鳥居は東日本大震災により倒壊"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1925,"nendo":"1925（大正14）\n9月16日\n記念碑","jidai":"大正","name":"水屋紀念碑","mei":"水屋紀念碑(45)","basho":"","honou":"下村喜兵衛ほか","biko":"大正12年9月1日の関東大震災で手水舎の屋根などが壊れたため再建した際の記念碑。"},{"sheet":"鳥居・社号標","category":"鳥居・社号標","year":1925,"nendo":"1925（大正14年）","jidai":"大正","name":"三の鳥居","mei":"奉納","basho":"拝殿前（43）","honou":"伊勢太々講\n長谷川宗七ほか","biko":"(石工)田中忠次郎\n平成23年3月11日東日本大震災で倒壊"},{"sheet":"鳥居・社号標","category":"鳥居・社号標","year":1925,"nendo":"1925（大正14年）(46)","jidai":"大正","name":"社号標","mei":"郷社久伊豆神社","basho":"御成街道沿い","honou":"伊勢太々共心講","biko":"川西実三書（正面）\n埼玉県知事斉藤守圀（右側面）"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1926,"nendo":"1926（大正15）\n４月記念碑","jidai":"昭和","name":"郷社久伊豆神社列格記念碑","mei":"郷社久伊豆神社列格記念碑(47)","basho":"枯山水","honou":"大正15年4月からの神社列格記念。岩槻町長・寄附者多数記載","biko":"(寸法)本塔322×135×18"},{"sheet":"狛犬","category":"狛犬","year":1926,"nendo":"1926（大正15年）","jidai":"昭和","name":"狛犬","mei":"奉納","basho":"拝殿前（48）","honou":"岩槻町字渋江　堀口とり","biko":""},{"sheet":"狛犬","category":"狛犬","year":1926,"nendo":"1926（大正15年）","jidai":"昭和","name":"狛犬","mei":"奉献","basho":"一の鳥居前（49）","honou":"貴族院議員\n齋藤善八","biko":"石工　田中忠次郎"},{"sheet":"鳥居・社号標","category":"鳥居・社号標","year":1927,"nendo":"1927（昭和2年）","jidai":"昭和","name":"社号標","mei":"郷社久伊豆神社","basho":"駐車場（50）","honou":"大島角蔵ほか","biko":"昭和2年1月建設"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1928,"nendo":"1928（昭和3）記念碑","jidai":"昭和","name":"御即位記念神輿再調碑","mei":"御即位記念神輿再調碑","basho":"神輿殿脇","honou":"昭和天皇即位記念。氏子負担金・特別寄付金・役員多数記載","biko":"昭和3年に作成（東雲堂・西山氏）"},{"sheet":"鳥居・社号標","category":"鳥居・社号標","year":1928,"nendo":"1928（昭和3年）","jidai":"昭和","name":"幟枠記念碑","mei":"奉納　幟枠壱対","basho":"参道入り口（52）","honou":"旧渋江町中","biko":"※幟枠本体は見当たらず"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1929,"nendo":"1929（昭和4）記念碑","jidai":"昭和","name":"奉納　花崗岩　敷拾五枚","mei":"奉納　花崗岩　敷拾五枚","basho":"","honou":"","biko":"追刻　敷石拾一枚　昭和十年(1935年)"},{"sheet":"記念碑（その他）","category":"記念碑・石碑","year":1931,"nendo":"1931（昭和6）\n12月","jidai":"","name":"神橋（神苑）","mei":"神橋","basho":"枯山水","honou":"貴族院議員　齋藤善八","biko":" 寸法:(寸法)38×94×216"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1932,"nendo":"1932（昭和7）記念碑","jidai":"昭和","name":"神苑記念碑","mei":"神苑記念碑\n鶴堂謹書","basho":"","honou":"斉藤善八","biko":"昭和6年9月19日着工。昭和7年9月18日建之。"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1933,"nendo":"1933（昭和8）記念碑","jidai":"昭和","name":"霊場消防井記念碑","mei":"霊場消防井記念碑","basho":"","honou":"岩槻消防組","biko":"昭和8年4月15日着工、5月14日竣工奉告祭挙行。石工　関野源之助刻"},{"sheet":"燈篭","category":"燈篭","year":1934,"nendo":"1934（昭和9年）\n（C）","jidai":"昭和","name":"燈篭","mei":"紀元節　\n皇太子殿下御生誕記念","basho":"左（36´）","honou":"岩槻郵便局長\n下村喜兵衛","biko":"皇太子とは平成天皇のこと 寸法:本塔264×84×84"},{"sheet":"鳥居・社号標","category":"鳥居・社号標","year":1936,"nendo":"1936（昭和11年）","jidai":"昭和","name":"二の鳥居","mei":"奉献","basho":"二ノ鳥居（57）","honou":"勲四等\n斉藤善八","biko":"石工匠　田中金三郎\n昭和11年12月9日地鎮祭・起工式"},{"sheet":"鳥居・社号標","category":"鳥居・社号標","year":1937,"nendo":"1937（昭和12年）","jidai":"昭和","name":"一の鳥居","mei":"奉献","basho":"一の鳥居（59）","honou":"岩槻町耕地整理組合関係者一同","biko":"元々は公民館前に設置。昭和43年現在の場所に移設。"},{"sheet":"鳥居・社号標","category":"鳥居・社号標","year":1937,"nendo":"1937（昭和12年）","jidai":"昭和","name":"社号標","mei":"郷社　久伊豆神社","basho":"公民館前","honou":"伊勢出雲御嶽太々記念","biko":"埼玉県知事　川西実三謹書\n石工　田中忠次郎"},{"sheet":"鳥居・社号標","category":"鳥居・社号標","year":1937,"nendo":"1937（昭和12年）","jidai":"昭和","name":"幟枠","mei":"奉献","basho":"参道入口（61）","honou":"村田雅太郎","biko":"田中石忠"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1938,"nendo":"1938（昭和13）記念碑","jidai":"昭和","name":"岩槻町耕地整理完成記念碑","mei":"岩槻町耕地整理完成記念碑","basho":"踏切のところ","honou":"岩槻町耕地整理組合役員一同","biko":"昭和8年着工、昭和12年8月完了。費用七万四千余円。"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1940,"nendo":"1940（昭和15）記念碑","jidai":"昭和","name":"紀元二千六百年　伊勢橿原神宮参拝記念碑","mei":"紀元二千六百年　伊勢橿原神宮参拝記念碑","basho":"","honou":"齋藤勘兵衛ほか","biko":"(寸法)本塔132×62×10"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1958,"nendo":"1958（昭和33）忠魂碑","jidai":"昭和","name":"忠魂碑","mei":"忠魂碑","basho":"","honou":"戦没者220余柱、建設委員多数記載","biko":"石工　田中忠次郎刻"},{"sheet":"記念碑（その他）","category":"記念碑・石碑","year":1960,"nendo":"1960(昭和35年)10月","jidai":"","name":"天水桶","mei":"奉納　岩槻市西町　昭和三十五年十月吉日","basho":"※平成元年拝殿修理の為取り外した","honou":"","biko":" 寸法:(寸法)本塔90×96×92"},{"sheet":"記念碑（その他）","category":"記念碑・石碑","year":1966,"nendo":"1966（昭和41）\n11月吉祥日","jidai":"","name":"鉄柵","mei":"奉献　大東亜戦争に依り鉄材供出の為","basho":"本殿回り","honou":"宮司　馬場栄太郎\n田中峯太郎（時の鐘製菓社長）","biko":"田中石材店\n宮本鉄工所"},{"sheet":"燈篭","category":"燈篭","year":1978,"nendo":"1978（昭和５３年）\n（D）","jidai":"昭和","name":"燈篭","mei":"奉献","basho":"階段上（66）","honou":"岩槻市本町\n寿々家　斉藤末寿","biko":"昭和53年(1978年)7月16日 寸法:本塔224×85×85"},{"sheet":"記念碑（その他）","category":"記念碑・石碑","year":1980,"nendo":"1980（昭和55）\n1月15日","jidai":"","name":"神牛","mei":"奉納　神牛","basho":"北野天満宮","honou":"馬場とよ（故馬場栄太郎名誉宮司の妻）","biko":"制作：富山県高岡市　一之瀬高級美術銅器製作所"},{"sheet":"記念碑（その他）","category":"記念碑・石碑","year":1981,"nendo":"1981（昭和56）\n2月初午","jidai":"","name":"稲荷狐","mei":"奉献　岩槻市氏子の隆昌を祈る","basho":"伏見稲荷神社","honou":"馬場栄太郎・とよ","biko":"清水家石材店"},{"sheet":"燈篭","category":"燈篭","year":1989,"nendo":"1989（平成元年）","jidai":"平成以降","name":"燈篭","mei":"奉・納","basho":"手水舎そば","honou":"勲五等双光旭日章\n新町　中島正信","biko":""},{"sheet":"狛犬","category":"狛犬","year":1993,"nendo":"1993（平成5年）","jidai":"平成以降","name":"狛犬","mei":"奉（右）\n納（左）","basho":"新社務所前","honou":"岩槻市城町1-4-1　高橋清隆・高橋久好ほか","biko":" "},{"sheet":"記念碑（その他）","category":"記念碑・石碑","year":1995,"nendo":"1995(平成7)年5月吉日","jidai":"","name":"榛名山神社","mei":"奉納　十九代当主平野達吉　株式会社山十　代表取締役平野祐次","basho":"榛名山神社","honou":"平野達吉・平野祐次","biko":"林工務店"},{"sheet":"鳥居・社号標","category":"鳥居・社号標","year":2010,"nendo":"2010(平成22年）","jidai":"平成以降","name":"社号標","mei":"武州岩槻総鎮守\n久伊豆神社","basho":"参道入り口","honou":"宮司　馬場裕彦","biko":"秩父神社宮司・京都大学名誉教授　薗田稔書"},{"sheet":"記念碑（その他）","category":"記念碑・石碑","year":2012,"nendo":"2012（平成24）","jidai":"","name":"叶い戌","mei":"","basho":"","honou":"宮司　馬場裕彦","biko":""}];
+
+let DB = [];
+let currentCat = '';
+let currentJidai = '';
+
+function togglePass() {
+  const input = document.getElementById('loginPass');
+  const btn = document.getElementById('togglePassBtn');
+  if (input.type === 'password') {
+    input.type = 'text';
+    btn.textContent = '🙈';
+  } else {
+    input.type = 'password';
+    btn.textContent = '👁';
+  }
+}
+
+// ===== 認証 =====
+async function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  const errEl = document.getElementById('loginError');
+  errEl.textContent = '';
+  const { data, error } = await db.auth.signInWithPassword({ email, password: pass });
+  if (error) {
+    errEl.textContent = 'メールアドレスまたはパスワードが正しくありません';
+    return;
+  }
+  document.getElementById('loginScreen').classList.remove('show');
+  document.getElementById('logoutBtn').style.display = 'inline-block';
+  document.getElementById('info-user').textContent = email;
+  await initDB();
+}
+
+async function doLogout() {
+  await db.auth.signOut();
+  document.getElementById('loginScreen').classList.add('show');
+  document.getElementById('logoutBtn').style.display = 'none';
+  document.getElementById('results').innerHTML = '';
+}
+
+async function checkSession() {
+  const { data: { session } } = await db.auth.getSession();
+  if (session) {
+    document.getElementById('loginScreen').classList.remove('show');
+    document.getElementById('logoutBtn').style.display = 'inline-block';
+    document.getElementById('info-user').textContent = session.user.email;
+    await initDB();
+  }
+}
+
+// ===== データ =====
+async function initDB() {
+  setSyncStatus('loading', '読み込み中…');
+  try {
+    const { data, error } = await db.from('monuments').select('*').order('year', { ascending: true, nullsFirst: true });
+    if (error) throw error;
+    if (data.length === 0) {
+      setSyncStatus('loading', '初期データ投入中…');
+      const records = BASE_DATA.map(r => ({
+        year: r.year || null, nendo: r.nendo || null, jidai: r.jidai || null,
+        category: r.category || null, name: r.name || null, basho: r.basho || null,
+        mei: r.mei || null, honou: r.honou || null, biko: r.biko || null, photos: [],
+      }));
+      const { error: insertError } = await db.from('monuments').insert(records);
+      if (insertError) throw insertError;
+      const { data: newData } = await db.from('monuments').select('*').order('year', { ascending: true, nullsFirst: true });
+      DB = newData || [];
+    } else {
+      DB = data;
+    }
+    setSyncStatus('ok', '同期済み ✓');
+    render();
+    updateInfo();
+  } catch(e) {
+    setSyncStatus('err', 'エラー: ' + e.message);
+    console.error(e);
+  }
+}
+
+function setSyncStatus(type, msg) {
+  const el = document.getElementById('syncStatus');
+  el.textContent = msg;
+  el.className = 'sync-badge sync-' + type;
+}
+
+function updateInfo() {
+  document.getElementById('info-total').textContent = DB.length + ' 件';
+  document.getElementById('info-updated').textContent = new Date().toLocaleDateString('ja-JP');
+}
+
+// ===== 表示 =====
+function setCat(v) {
+  currentCat = v;
+  ['cat-all','cat-0','cat-1','cat-2','cat-3','cat-4'].forEach(id => document.getElementById(id)?.classList.remove('active'));
+  const cats = ['','記念碑・石碑','記念碑（伊勢参拝記念）','燈篭','狛犬','鳥居・社号標'];
+  const idx = cats.indexOf(v);
+  document.getElementById(idx === 0 ? 'cat-all' : 'cat-'+(idx-1))?.classList.add('active');
+  render();
+}
+function setJidai(v) {
+  currentJidai = v;
+  ['era-all','era-0','era-1','era-2','era-3','era-4'].forEach(id => document.getElementById(id)?.classList.remove('active'));
+  const eras = ['','江戸時代','明治','大正','昭和','平成以降'];
+  const idx = eras.indexOf(v);
+  document.getElementById(idx === 0 ? 'era-all' : 'era-'+(idx-1))?.classList.add('active');
+  render();
+}
+
+function hl(text, q) {
+  if (!q || !text) return text || '';
+  const e = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return text.replace(new RegExp(e, 'gi'), m => `<span class="hl">${m}</span>`);
+}
+
+function render() {
+  const q = document.getElementById('searchInput').value.trim().toLowerCase();
+  const sort = document.getElementById('sortFilter').value;
+  let list = DB.filter(r => {
+    if (currentCat && r.category !== currentCat) return false;
+    if (currentJidai && r.jidai !== currentJidai) return false;
+    if (q) {
+      const all = [r.name,r.mei,r.basho,r.honou,r.biko,r.nendo].join(' ').toLowerCase();
+      if (!all.includes(q)) return false;
+    }
+    return true;
+  });
+  if (sort === 'year_asc') list.sort((a,b) => (a.year||9999)-(b.year||9999));
+  else if (sort === 'year_desc') list.sort((a,b) => (b.year||0)-(a.year||0));
+  else list.sort((a,b) => (a.name||'').localeCompare(b.name||'','ja'));
+
+  const counts = {'':DB.length,'記念碑・石碑':0,'記念碑（伊勢参拝記念）':0,'燈篭':0,'狛犬':0,'鳥居・社号標':0};
+  DB.forEach(r => { if (counts[r.category] !== undefined) counts[r.category]++; });
+  document.getElementById('cnt-all').textContent = counts[''];
+  document.getElementById('cnt-0').textContent = counts['記念碑・石碑'];
+  document.getElementById('cnt-1').textContent = counts['記念碑（伊勢参拝記念）'];
+  document.getElementById('cnt-2').textContent = counts['燈篭'];
+  document.getElementById('cnt-3').textContent = counts['狛犬'];
+  document.getElementById('cnt-4').textContent = counts['鳥居・社号標'];
+  document.getElementById('countNum').textContent = list.length;
+  document.getElementById('filterBadge').style.display = (q || currentCat || currentJidai) ? 'inline-block' : 'none';
+
+  const rawQ = document.getElementById('searchInput').value.trim();
+  const container = document.getElementById('results');
+  if (list.length === 0) {
+    container.innerHTML = `<div class="empty"><big>🪨</big>該当する記念碑が見つかりませんでした</div>`;
+    return;
+  }
+  container.innerHTML = list.map((r, i) => {
+    const catCls = 'tag-cat-' + r.category;
+    const photos = r.photos || [];
+    return `<div class="record" id="rec-${r.id}">
+      <div class="record-head" onclick="toggleRec(${r.id})">
+        <div class="record-num">${i+1}</div>
+        <div class="record-body">
+          <div class="record-title">${hl(r.name||'（名称不明）', rawQ)}</div>
+          <div class="record-meta">
+            ${r.year ? `<span class="tag tag-year">${r.year}年</span>` : ''}
+            ${r.jidai ? `<span class="tag tag-year">${r.jidai}</span>` : ''}
+            <span class="tag ${catCls}">${r.category}</span>
+            ${r.basho ? `<span class="tag tag-place">${hl(r.basho.replace(/\n/g,' '), rawQ)}</span>` : ''}
+            ${photos.length > 0 ? `<span class="tag tag-photo">写真 ${photos.length}枚</span>` : ''}
+          </div>
+        </div>
+        <div class="record-actions" onclick="event.stopPropagation()">
+          <button class="act" onclick="editRecord(${r.id})">編集</button>
+          <button class="act print" onclick="exportOne(${r.id})">印刷用</button>
+          <button class="act del" onclick="deleteRecord(${r.id})">削除</button>
+        </div>
+        <svg class="record-expand" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="record-detail">
+        <div class="detail-cols">
+          ${r.nendo ? `<div class="detail-field"><dt>成立時代</dt><dd>${hl(r.nendo, rawQ)}</dd></div>` : ''}
+          ${r.jidai ? `<div class="detail-field"><dt>時代区分</dt><dd>${r.jidai}</dd></div>` : ''}
+        </div>
+        ${r.mei ? `<hr class="detail-sep"><div class="detail-full"><dt>銘文</dt><dd>${hl(r.mei, rawQ)}</dd></div>` : ''}
+        ${r.honou ? `<hr class="detail-sep"><div class="detail-full"><dt>奉納者・関係者</dt><dd>${hl(r.honou, rawQ)}</dd></div>` : ''}
+        ${r.biko ? `<hr class="detail-sep"><div class="detail-full"><dt>備考・石工・寸法</dt><dd>${hl(r.biko, rawQ)}</dd></div>` : ''}
+        <hr class="detail-sep">
+        <div class="photo-section"><dt>写真</dt>${buildPhotoGrid(r)}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleRec(id) { document.getElementById('rec-'+id)?.classList.toggle('open'); }
+
+// ===== 編集 =====
+let editingId = null;
+function openModal(id) {
+  editingId = id || null;
+  const r = id ? DB.find(x => x.id === id) : null;
+  document.getElementById('modalTitle').textContent = r ? '編集' : '新規追加';
+  document.getElementById('f_year').value = r?.year || '';
+  document.getElementById('f_nendo').value = r?.nendo || '';
+  document.getElementById('f_category').value = r?.category || '記念碑・石碑';
+  document.getElementById('f_jidai').value = r?.jidai || '';
+  document.getElementById('f_name').value = r?.name || '';
+  document.getElementById('f_basho').value = r?.basho || '';
+  document.getElementById('f_mei').value = r?.mei || '';
+  document.getElementById('f_honou').value = r?.honou || '';
+  document.getElementById('f_biko').value = r?.biko || '';
+  document.getElementById('modalOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('f_name').focus(), 50);
+}
+function closeModal() { document.getElementById('modalOverlay').classList.remove('open'); editingId = null; }
+function closeModalIfBg(e) { if (e.target === document.getElementById('modalOverlay')) closeModal(); }
+
+async function saveRecord() {
+  const name = document.getElementById('f_name').value.trim();
+  if (!name) { showToast('名称を入力してください'); return; }
+  const existing = editingId ? DB.find(x => x.id === editingId) : null;
+  const rec = {
+    year: parseInt(document.getElementById('f_year').value) || null,
+    nendo: document.getElementById('f_nendo').value.trim() || null,
+    category: document.getElementById('f_category').value,
+    jidai: document.getElementById('f_jidai').value || null,
+    name, basho: document.getElementById('f_basho').value.trim() || null,
+    mei: document.getElementById('f_mei').value.trim() || null,
+    honou: document.getElementById('f_honou').value.trim() || null,
+    biko: document.getElementById('f_biko').value.trim() || null,
+    photos: existing?.photos || [],
+    updated_at: new Date().toISOString(),
+  };
+  try {
+    if (editingId) {
+      const { error } = await db.from('monuments').update(rec).eq('id', editingId);
+      if (error) throw error;
+      const idx = DB.findIndex(x => x.id === editingId);
+      if (idx >= 0) DB[idx] = { ...DB[idx], ...rec };
+    } else {
+      const { data, error } = await db.from('monuments').insert(rec).select();
+      if (error) throw error;
+      DB.push(data[0]);
+    }
+    closeModal(); render(); updateInfo();
+    showToast(editingId ? '更新しました ✓' : '追加しました ✓');
+    setSyncStatus('ok', '同期済み ✓');
+  } catch(e) {
+    showToast('保存に失敗しました');
+    setSyncStatus('err', 'エラー');
+    console.error(e);
+  }
+}
+
+function editRecord(id) { openModal(id); }
+
+async function deleteRecord(id) {
+  const r = DB.find(x => x.id === id);
+  if (!confirm(`「${r?.name}」を削除しますか？`)) return;
+  try {
+    const { error } = await db.from('monuments').delete().eq('id', id);
+    if (error) throw error;
+    DB = DB.filter(x => x.id !== id);
+    render(); updateInfo();
+    showToast('削除しました');
+    setSyncStatus('ok', '同期済み ✓');
+  } catch(e) {
+    showToast('削除に失敗しました');
+    console.error(e);
+  }
+}
+
+// ===== 写真 =====
+function buildPhotoGrid(r) {
+  return `<div class="photo-grid" id="photos-${r.id}">
+    ${(r.photos||[]).map((src,i) => `
+      <div class="photo-thumb">
+        <img src="${src}" onclick="openLightbox(${r.id},${i})">
+        <button class="del-photo" onclick="deletePhoto(${r.id},${i})">✕</button>
+      </div>`).join('')}
+    <label class="photo-add">
+      <span>＋</span>写真追加
+      <input type="file" accept="image/*" multiple style="display:none" onchange="addPhotos(${r.id},this)">
+    </label>
+  </div>`;
+}
+
+async function addPhotos(id, input) {
+  const r = DB.find(x => x.id === id);
+  if (!r) return;
+  if (!r.photos) r.photos = [];
+  const files = Array.from(input.files);
+  let loaded = 0;
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = async e => {
+      r.photos.push(e.target.result);
+      if (++loaded === files.length) {
+        try {
+          await db.from('monuments').update({ photos: r.photos, updated_at: new Date().toISOString() }).eq('id', id);
+          const g = document.getElementById('photos-'+id);
+          if (g) g.outerHTML = buildPhotoGrid(r);
+          showToast('写真を追加しました ✓');
+          setSyncStatus('ok', '同期済み ✓');
+        } catch(e) { showToast('写真の保存に失敗しました'); console.error(e); }
+      }
+    };
+    reader.readAsDataURL(file);
+  });
+  input.value = '';
+}
+
+async function deletePhoto(id, idx) {
+  const r = DB.find(x => x.id === id);
+  if (!r || !confirm('この写真を削除しますか？')) return;
+  r.photos.splice(idx, 1);
+  try {
+    await db.from('monuments').update({ photos: r.photos, updated_at: new Date().toISOString() }).eq('id', id);
+    const g = document.getElementById('photos-'+id);
+    if (g) g.outerHTML = buildPhotoGrid(r);
+    showToast('写真を削除しました');
+  } catch(e) { showToast('削除に失敗しました'); console.error(e); }
+}
+
+let lbId=null, lbIdx=0;
+function openLightbox(id,idx) {
+  lbId=id; lbIdx=idx;
+  const r = DB.find(x => x.id === id);
+  document.getElementById('lightboxImg').src = r.photos[idx];
+  document.getElementById('lightbox').classList.add('open');
+}
+function closeLightbox() { document.getElementById('lightbox').classList.remove('open'); }
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); closeLightbox(); } });
+
+// ===== 印刷用ページ出力（1件） =====
+function exportOne(id) {
+  const r = DB.find(x => x.id === id);
+  if (!r) return;
+
+  const photos = (r.photos || []).map(src =>
+    `<img src="${src}" class="photo">`
+  ).join('');
+
+  const photoBlock = photos
+    ? `<div class="photo-block">${photos}</div>`
+    : `<div class="photo-block empty">（写真なし）</div>`;
+
+  const html = `<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>${r.name || '石碑'}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;600;700&family=Noto+Sans+JP:wght@400;500&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    background: #fff;
+    color: #1a1410;
+    padding: 24px 32px;
+    font-size: 13px;
+  }
+  .sheet {
+    max-width: 720px;
+    margin: 0 auto;
+    border: 1px solid #ccc;
+    padding: 24px;
+  }
+  .shrine-name {
+    text-align: right;
+    font-size: 11px;
+    color: #888;
+    margin-bottom: 4px;
+    letter-spacing: 0.1em;
+  }
+  .title {
+    font-family: 'Noto Serif JP', serif;
+    font-size: 26px;
+    font-weight: 700;
+    border-bottom: 2px solid #1a1410;
+    padding-bottom: 8px;
+    margin-bottom: 16px;
+    letter-spacing: 0.05em;
+  }
+  .meta {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 16px;
+    font-size: 12px;
+    color: #555;
+  }
+  .meta span { background: #f0ece4; padding: 3px 10px; border-radius: 4px; }
+  .photo-block {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 20px;
+    min-height: 160px;
+    border: 1px dashed #ccc;
+    padding: 10px;
+    border-radius: 6px;
+    align-items: flex-start;
+  }
+  .photo-block.empty {
+    align-items: center;
+    justify-content: center;
+    color: #bbb;
+    font-size: 13px;
+  }
+  .photo { max-height: 200px; max-width: 280px; object-fit: contain; border-radius: 4px; border: 1px solid #ddd; }
+  table { width: 100%; border-collapse: collapse; }
+  tr { border-bottom: 1px solid #e8e0d4; }
+  td { padding: 8px 10px; vertical-align: top; line-height: 1.8; white-space: pre-wrap; word-break: break-all; }
+  td:first-child {
+    width: 120px; font-size: 11px; font-weight: 500;
+    color: #8b6914; white-space: nowrap;
+  }
+  .print-btn {
+    display: block; margin: 20px auto 0;
+    padding: 10px 30px; background: #1a1410; color: white;
+    border: none; border-radius: 8px; font-size: 14px;
+    font-family: inherit; cursor: pointer; letter-spacing: 0.1em;
+  }
+  @media print {
+    .print-btn { display: none; }
+    body { padding: 0; }
+    .sheet { border: none; padding: 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="sheet">
+  <div class="shrine-name">久伊豆神社　境内石碑記録</div>
+  <div class="title">${r.name || '（名称不明）'}</div>
+  <div class="meta">
+    ${r.nendo ? `<span>${r.nendo.replace(/\n/g,' ')}</span>` : ''}
+    ${r.jidai ? `<span>${r.jidai}</span>` : ''}
+    ${r.category ? `<span>${r.category}</span>` : ''}
+  </div>
+  ${photoBlock}
+  <table>
+    ${r.basho ? `<tr><td>場所</td><td>${r.basho}</td></tr>` : ''}
+    ${r.mei ? `<tr><td>銘文</td><td>${r.mei}</td></tr>` : ''}
+    ${r.honou ? `<tr><td>奉納者・関係者</td><td>${r.honou}</td></tr>` : ''}
+    ${r.biko ? `<tr><td>備考・石工・寸法</td><td>${r.biko}</td></tr>` : ''}
+  </table>
+</div>
+<button class="print-btn" onclick="window.print()">🖨 印刷する</button>
+</body>
+</html>`;
+
+  const w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+}
+
+checkSession();
+</script>
+</body>
+</html>
