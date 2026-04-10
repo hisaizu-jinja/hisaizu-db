@@ -112,6 +112,54 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--c-bg); color: 
 .detail-full dd { font-size: 14px; line-height: 1.8; color: var(--c-muted); white-space: pre-line; }
 .detail-full + .detail-full { margin-top: 10px; }
 
+/* ===== MOBILE ===== */
+@media (max-width: 640px) {
+  :root { --sidebar-w: 0px; --header-h: 48px; }
+  .site-header { padding: 0 12px; gap: 8px; }
+  .logo small { display: none; }
+  .logo { font-size: 13px; }
+  .header-search { max-width: none; }
+  .btn-search { display: none; }
+  .btn-add-header { padding: 6px 10px; font-size: 12px; }
+  .btn-logout { padding: 6px 10px; font-size: 11px; }
+  .sidebar { display: none; }
+  .layout { flex-direction: column; }
+  .main { width: 100%; }
+  .record-head { padding: 12px 14px; gap: 10px; }
+  .record-title { font-size: 15px; }
+  .record-actions { display: none; }
+  .record.open .record-actions { display: flex; margin: 8px 14px 12px; opacity: 1; }
+  .record-detail { padding: 12px 14px; }
+  .detail-cols { grid-template-columns: 1fr; gap: 8px; }
+  .photo-thumb { width: 80px; height: 80px; }
+  .photo-add { width: 80px; height: 80px; }
+  .results-bar { padding: 8px 14px; }
+  .modal { border-radius: 10px 10px 0 0; position: fixed; bottom: 0; left: 0; right: 0; max-width: none; max-height: 85vh; }
+  .modal-overlay { align-items: flex-end; padding: 0; }
+  .form-2col { grid-template-columns: 1fr; }
+  /* スマホ用フィルターバー */
+  .mobile-filter-bar {
+    display: flex; overflow-x: auto; gap: 8px;
+    padding: 10px 14px; background: var(--c-sidebar);
+    scrollbar-width: none;
+  }
+  .mobile-filter-bar::-webkit-scrollbar { display: none; }
+  .mobile-filter-btn {
+    flex-shrink: 0; background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: rgba(255,255,255,0.7); border-radius: 20px;
+    padding: 6px 14px; font-size: 12px; font-family: inherit;
+    cursor: pointer; white-space: nowrap;
+  }
+  .mobile-filter-btn.active {
+    background: rgba(154,120,48,0.3);
+    border-color: #9a7830; color: #d4a853;
+  }
+}
+@media (min-width: 641px) {
+  .mobile-filter-bar { display: none; }
+}
+
 /* ===== PHOTOS ===== */
 .photo-section { margin-top: 12px; }
 .photo-section dt { font-size: 11px; font-weight: 500; letter-spacing: 0.1em; color: var(--c-gold); margin-bottom: 8px; text-transform: uppercase; }
@@ -229,6 +277,15 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--c-bg); color: 
   </aside>
 
   <main class="main">
+    <!-- スマホ用フィルターバー -->
+    <div class="mobile-filter-bar">
+      <button class="mobile-filter-btn active" onclick="setCat('')" id="m-cat-all">すべて</button>
+      <button class="mobile-filter-btn" onclick="setCat('記念碑・石碑')" id="m-cat-0">記念碑・石碑</button>
+      <button class="mobile-filter-btn" onclick="setCat('記念碑（伊勢参拝記念）')" id="m-cat-1">伊勢参拝記念</button>
+      <button class="mobile-filter-btn" onclick="setCat('燈篭')" id="m-cat-2">燈篭</button>
+      <button class="mobile-filter-btn" onclick="setCat('狛犬')" id="m-cat-3">狛犬</button>
+      <button class="mobile-filter-btn" onclick="setCat('鳥居・社号標')" id="m-cat-4">鳥居・社号標</button>
+    </div>
     <div class="results-bar">
       <span><strong id="countNum">0</strong> 件</span>
       <span id="filterBadge" class="badge-filter" style="display:none">絞り込み中</span>
@@ -390,9 +447,11 @@ function updateInfo() {
 function setCat(v) {
   currentCat = v;
   ['cat-all','cat-0','cat-1','cat-2','cat-3','cat-4'].forEach(id => document.getElementById(id)?.classList.remove('active'));
+  ['m-cat-all','m-cat-0','m-cat-1','m-cat-2','m-cat-3','m-cat-4'].forEach(id => document.getElementById(id)?.classList.remove('active'));
   const cats = ['','記念碑・石碑','記念碑（伊勢参拝記念）','燈篭','狛犬','鳥居・社号標'];
   const idx = cats.indexOf(v);
   document.getElementById(idx === 0 ? 'cat-all' : 'cat-'+(idx-1))?.classList.add('active');
+  document.getElementById(idx === 0 ? 'm-cat-all' : 'm-cat-'+(idx-1))?.classList.add('active');
   render();
 }
 function setJidai(v) {
@@ -559,12 +618,15 @@ async function deleteRecord(id) {
   }
 }
 
-// ===== 写真 =====
+// ===== 写真（Supabase Storage版） =====
+const STORAGE_BUCKET = 'photos';
+
 function buildPhotoGrid(r) {
+  const photos = r.photos || [];
   return `<div class="photo-grid" id="photos-${r.id}">
-    ${(r.photos||[]).map((src,i) => `
+    ${photos.map((url, i) => `
       <div class="photo-thumb">
-        <img src="${src}" onclick="openLightbox(${r.id},${i})">
+        <img src="${url}" onclick="openLightbox(${r.id},${i})">
         <button class="del-photo" onclick="deletePhoto(${r.id},${i})">✕</button>
       </div>`).join('')}
     <label class="photo-add">
@@ -579,36 +641,59 @@ async function addPhotos(id, input) {
   if (!r) return;
   if (!r.photos) r.photos = [];
   const files = Array.from(input.files);
-  let loaded = 0;
-  files.forEach(file => {
-    const reader = new FileReader();
-    reader.onload = async e => {
-      r.photos.push(e.target.result);
-      if (++loaded === files.length) {
-        try {
-          await db.from('monuments').update({ photos: r.photos, updated_at: new Date().toISOString() }).eq('id', id);
-          const g = document.getElementById('photos-'+id);
-          if (g) g.outerHTML = buildPhotoGrid(r);
-          showToast('写真を追加しました ✓');
-          setSyncStatus('ok', '同期済み ✓');
-        } catch(e) { showToast('写真の保存に失敗しました'); console.error(e); }
-      }
-    };
-    reader.readAsDataURL(file);
-  });
+  showToast('写真をアップロード中…');
+  let uploaded = 0;
+  for (const file of files) {
+    const ext = file.name.split('.').pop();
+    const path = `${id}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+    try {
+      const { error } = await db.storage.from(STORAGE_BUCKET).upload(path, file);
+      if (error) throw error;
+      const { data } = db.storage.from(STORAGE_BUCKET).getPublicUrl(path);
+      r.photos.push(data.publicUrl);
+      uploaded++;
+    } catch(e) {
+      console.error('Upload error:', e);
+      showToast('写真のアップロードに失敗しました');
+    }
+  }
+  if (uploaded > 0) {
+    try {
+      await db.from('monuments').update({ photos: r.photos, updated_at: new Date().toISOString() }).eq('id', id);
+      const g = document.getElementById('photos-'+id);
+      if (g) g.outerHTML = buildPhotoGrid(r);
+      showToast(`写真を${uploaded}枚追加しました ✓`);
+      setSyncStatus('ok', '同期済み ✓');
+    } catch(e) {
+      showToast('写真URLの保存に失敗しました');
+      console.error(e);
+    }
+  }
   input.value = '';
 }
 
 async function deletePhoto(id, idx) {
   const r = DB.find(x => x.id === id);
   if (!r || !confirm('この写真を削除しますか？')) return;
+  const url = r.photos[idx];
+  // StorageのパスをURLから抽出
+  const path = url.split('/storage/v1/object/public/photos/')[1];
+  if (path) {
+    try {
+      await db.storage.from(STORAGE_BUCKET).remove([path]);
+    } catch(e) { console.error('Storage delete error:', e); }
+  }
   r.photos.splice(idx, 1);
   try {
     await db.from('monuments').update({ photos: r.photos, updated_at: new Date().toISOString() }).eq('id', id);
     const g = document.getElementById('photos-'+id);
     if (g) g.outerHTML = buildPhotoGrid(r);
     showToast('写真を削除しました');
-  } catch(e) { showToast('削除に失敗しました'); console.error(e); }
+    setSyncStatus('ok', '同期済み ✓');
+  } catch(e) {
+    showToast('削除に失敗しました');
+    console.error(e);
+  }
 }
 
 let lbId=null, lbIdx=0;
