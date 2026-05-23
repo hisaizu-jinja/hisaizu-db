@@ -17,82 +17,6 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Noto Sans JP', sans-serif; background: var(--c-bg); color: var(--c-ink); min-height: 100vh; }
 
-/* ===== LOGIN ===== */
-.login-screen { display: none; position: fixed; inset: 0; z-index: 1000; background: #f0ebe2; align-items: center; justify-content: center; }
-.login-screen.show { display: flex; }
-.login-box {
-  width: 360px;
-  background: #fff;
-  border-radius: 4px;
-  padding: 48px 40px 40px;
-  box-shadow: 0 2px 16px rgba(0,0,0,0.10);
-}
-.login-mon {
-  text-align: center;
-  font-size: 28px; color: #9a7830;
-  margin-bottom: 8px; line-height: 1;
-}
-.login-title {
-  font-family: 'Noto Serif JP', serif;
-  font-size: 18px; color: #1a1410;
-  text-align: center;
-  letter-spacing: 0.08em;
-  margin-bottom: 4px;
-}
-.login-sub {
-  font-size: 11px; color: #999;
-  text-align: center;
-  letter-spacing: 0.06em;
-  margin-bottom: 32px;
-}
-.login-label {
-  display: block;
-  font-size: 13px;
-  color: #1a1410;
-  font-weight: 500;
-  margin-bottom: 6px;
-  margin-top: 16px;
-}
-.login-input {
-  width: 100%;
-  background: #fff;
-  border: 1px solid #c8c0b8;
-  border-radius: 4px;
-  padding: 12px 14px;
-  font-size: 15px;
-  font-family: inherit;
-  color: #1a1410;
-  outline: none;
-  transition: border-color 0.2s;
-}
-.login-input:focus { border-color: #9a7830; }
-.login-pass-wrap { position: relative; }
-.login-pass-wrap .login-input { padding-right: 44px; }
-.login-pass-toggle {
-  position: absolute; right: 14px; top: 50%;
-  transform: translateY(-50%);
-  background: none; border: none; cursor: pointer;
-  color: #999; font-size: 13px; padding: 0;
-  font-family: inherit; letter-spacing: 0;
-}
-.login-pass-toggle:hover { color: #555; }
-.login-btn {
-  width: 100%;
-  background: #8b3a2a;
-  color: #fff; border: none; border-radius: 4px;
-  padding: 14px; font-size: 15px;
-  font-family: inherit; cursor: pointer;
-  margin-top: 24px;
-  letter-spacing: 0.06em;
-  transition: background 0.15s;
-}
-.login-btn:hover { background: #7a3020; }
-.login-error {
-  color: #c62828; font-size: 12px;
-  margin-top: 10px; min-height: 18px;
-  text-align: center;
-}
-
 /* ===== HEADER ===== */
 .site-header { position: fixed; top: 0; left: 0; right: 0; z-index: 200; height: var(--header-h); background: var(--c-sidebar); display: flex; align-items: center; gap: 16px; padding: 0 20px; border-bottom: 2px solid #9a7830; }
 .logo { font-family: 'Noto Serif JP', serif; font-size: 15px; font-weight: 700; color: #d4a853; letter-spacing: 0.08em; white-space: nowrap; }
@@ -106,8 +30,6 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--c-bg); color: 
 .btn-search:hover { filter: brightness(1.15); }
 .btn-add-header { background: transparent; border: 1px solid rgba(154,120,48,0.6); color: #d4a853; border-radius: 5px; padding: 7px 14px; font-size: 13px; font-family: inherit; cursor: pointer; white-space: nowrap; }
 .btn-add-header:hover { background: rgba(154,120,48,0.15); }
-.btn-logout { background: transparent; border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.5); border-radius: 5px; padding: 7px 14px; font-size: 12px; font-family: inherit; cursor: pointer; white-space: nowrap; }
-.btn-logout:hover { border-color: rgba(255,255,255,0.4); color: #fff; }
 
 /* ===== LAYOUT ===== */
 .layout { display: flex; margin-top: var(--header-h); min-height: calc(100vh - var(--header-h)); }
@@ -183,7 +105,6 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--c-bg); color: 
   .header-search { max-width: none; }
   .btn-search { display: none; }
   .btn-add-header { padding: 6px 10px; font-size: 12px; }
-  .btn-logout { padding: 6px 10px; font-size: 11px; }
   .sidebar { display: none; }
   .layout { flex-direction: column; }
   .main { width: 100%; }
@@ -277,24 +198,6 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--c-bg); color: 
 </head>
 <body>
 
-<!-- ログイン画面 -->
-<div class="login-screen show" id="loginScreen">
-  <div class="login-box">
-    <div class="login-mon">⛩</div>
-    <div class="login-title">久伊豆神社</div>
-    <div class="login-sub">境内石碑・記念碑 データベース</div>
-    <label class="login-label">メールアドレス</label>
-    <input type="email" class="login-input" id="loginEmail" placeholder="メールアドレスを入力">
-    <label class="login-label">パスワード</label>
-    <div class="login-pass-wrap">
-      <input type="password" class="login-input" id="loginPass" placeholder="パスワードを入力" onkeydown="if(event.key==='Enter')doLogin()">
-      <button class="login-pass-toggle" onclick="togglePass()" type="button" id="togglePassBtn">表示</button>
-    </div>
-    <button class="login-btn" onclick="doLogin()">ログイン</button>
-    <div class="login-error" id="loginError"></div>
-  </div>
-</div>
-
 <!-- メイン画面 -->
 <header class="site-header">
   <div class="logo">久伊豆神社<small>境内石碑・記念碑 データベース</small></div>
@@ -304,7 +207,6 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--c-bg); color: 
   </div>
   <button class="btn-search" onclick="render()">検索</button>
   <button class="btn-add-header" onclick="openModal()">＋ 新規追加</button>
-  <button class="btn-logout" onclick="doLogout()" id="logoutBtn" style="display:none">ログアウト</button>
 </header>
 
 <div class="layout">
@@ -343,7 +245,6 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--c-bg); color: 
       <div class="sidebar-info">
         <div class="info-row"><span class="info-label">総件数</span><span class="info-val" id="info-total">—</span></div>
         <div class="info-row"><span class="info-label">最終更新</span><span class="info-val" id="info-updated">—</span></div>
-        <div class="info-row"><span class="info-label">ログイン中</span><span class="info-val" id="info-user" style="font-size:10px">—</span></div>
       </div>
     </div>
   </aside>
@@ -423,57 +324,6 @@ const BASE_DATA = [{"sheet":"記念碑（その他）","category":"記念碑・�
 let DB = [];
 let currentCat = '';
 let currentJidai = '';
-
-function togglePass() {
-  const input = document.getElementById('loginPass');
-  const btn = document.getElementById('togglePassBtn');
-  if (input.type === 'password') {
-    input.type = 'text';
-    btn.textContent = '非表示';
-  } else {
-    input.type = 'password';
-    btn.textContent = '表示';
-  }
-}
-
-// ===== 認証（シンプルパスワード方式） =====
-const PASSWORDS = {
-  'mail5@hisaizu.jp': 'pass1012',
-};
-const SESSION_KEY = 'hisaizu_session';
-
-function doLogin() {
-  const email = document.getElementById('loginEmail').value.trim();
-  const pass = document.getElementById('loginPass').value;
-  const errEl = document.getElementById('loginError');
-  errEl.textContent = '';
-  if (PASSWORDS[email] && PASSWORDS[email] === pass) {
-    sessionStorage.setItem(SESSION_KEY, email);
-    document.getElementById('loginScreen').classList.remove('show');
-    document.getElementById('logoutBtn').style.display = 'inline-block';
-    document.getElementById('info-user').textContent = email;
-    initDB();
-  } else {
-    errEl.textContent = 'メールアドレスまたはパスワードが正しくありません';
-  }
-}
-
-function doLogout() {
-  sessionStorage.removeItem(SESSION_KEY);
-  document.getElementById('loginScreen').classList.add('show');
-  document.getElementById('logoutBtn').style.display = 'none';
-  document.getElementById('results').innerHTML = '';
-}
-
-function checkSession() {
-  const email = sessionStorage.getItem(SESSION_KEY);
-  if (email) {
-    document.getElementById('loginScreen').classList.remove('show');
-    document.getElementById('logoutBtn').style.display = 'inline-block';
-    document.getElementById('info-user').textContent = email;
-    initDB();
-  }
-}
 
 // ===== データ =====
 async function initDB() {
@@ -938,7 +788,8 @@ function exportOne(id) {
   w.document.close();
 }
 
-checkSession();
+// ページを開いたら直接データを読み込む（ログイン不要）
+initDB();
 </script>
 </body>
 </html>
