@@ -302,7 +302,7 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--c-bg); color: 
     <div class="modal-body">
       <div class="form-2col">
         <div class="form-row"><label>西暦</label><input type="number" id="f_year" placeholder="例：1800"></div>
-        <div class="form-row"><label>和暦・成立時代</label><input type="text" id="f_nendo" placeholder="例：1800（寛政12）"></div>
+        <div class="form-row"><label>和暦</label><input type="text" id="f_nendo" placeholder="例：貞享3、明治29"></div>
       </div>
       <div class="form-2col">
         <div class="form-row"><label>種類</label>
@@ -311,10 +311,10 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--c-bg); color: 
             <option>燈篭</option><option>狛犬</option><option>鳥居・社号標</option><option>その他</option>
           </select>
         </div>
-        <div class="form-row"><label>時代区分</label>
+        <div class="form-row"><label>成立時代</label>
           <select id="f_jidai">
             <option value="">（自動）</option><option>江戸時代</option><option>明治</option>
-            <option>大正</option><option>昭和</option><option>平成以降</option>
+            <option>大正</option><option>昭和</option><option>平成以降</option><option>不明</option>
           </select>
         </div>
       </div>
@@ -579,8 +579,8 @@ function recordHtml(r, num, rawQ, dragEnabled) {
       </div>
       <div class="record-detail">
         <div class="detail-cols">
-          ${r.nendo ? `<div class="detail-field"><dt>成立時代</dt><dd>${hl(r.nendo, rawQ)}</dd></div>` : ''}
-          ${r.jidai ? `<div class="detail-field"><dt>時代区分</dt><dd>${r.jidai}</dd></div>` : ''}
+          ${r.nendo ? `<div class="detail-field"><dt>和暦</dt><dd>${hl(r.nendo, rawQ)}</dd></div>` : ''}
+          ${r.jidai ? `<div class="detail-field"><dt>成立時代</dt><dd>${r.jidai}</dd></div>` : ''}
         </div>
         ${r.mei ? `<hr class="detail-sep"><div class="detail-full"><dt>銘文</dt><dd>${hl(r.mei, rawQ)}</dd></div>` : ''}
         ${r.honou ? `<hr class="detail-sep"><div class="detail-full"><dt>奉納者・関係者</dt><dd>${hl(r.honou, rawQ)}</dd></div>` : ''}
