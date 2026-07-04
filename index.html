@@ -26,6 +26,8 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--c-bg); color: 
 .header-search input { flex: 1; background: transparent; border: none; outline: none; color: #fff; font-size: 14px; font-family: inherit; padding: 9px 0; }
 .header-search input::placeholder { color: rgba(255,255,255,0.4); }
 .header-search svg { color: rgba(255,255,255,0.45); flex-shrink: 0; }
+.search-clear { background: rgba(255,255,255,0.15); color: #fff; border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 10px; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; padding: 0; line-height: 1; }
+.search-clear:hover { background: rgba(255,255,255,0.3); }
 .btn-search { background: var(--c-accent); color: #fff; border: none; border-radius: 5px; padding: 7px 16px; font-size: 13px; font-family: inherit; cursor: pointer; white-space: nowrap; }
 .btn-search:hover { filter: brightness(1.15); }
 .btn-add-header { background: transparent; border: 1px solid rgba(154,120,48,0.6); color: #d4a853; border-radius: 5px; padding: 7px 14px; font-size: 13px; font-family: inherit; cursor: pointer; white-space: nowrap; }
@@ -71,10 +73,11 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--c-bg); color: 
 .tag { display: inline-flex; align-items: center; border-radius: 2px; padding: 2px 8px; font-size: 11px; font-weight: 500; white-space: nowrap; letter-spacing: 0.06em; }
 .tag-year { background: transparent; color: var(--c-muted); border: 1px solid var(--c-border); }
 .tag-cat-記念碑・石碑 { background: transparent; color: #2a5a28; border: 1px solid #b0d4b0; }
-.tag-cat-記念碑（伊勢参拝記念） { background: transparent; color: #7a4010; border: 1px solid #e0c090; }
+.tag-cat-伊勢参拝記念 { background: transparent; color: #7a4010; border: 1px solid #e0c090; }
 .tag-cat-燈篭 { background: transparent; color: #6a5800; border: 1px solid #dcd090; }
 .tag-cat-狛犬 { background: transparent; color: #2a2a9a; border: 1px solid #a8a8e0; }
 .tag-cat-鳥居・社号標 { background: transparent; color: #7a1818; border: 1px solid #e0a8a8; }
+.tag-cat-その他 { background: transparent; color: #555; border: 1px solid #c8c0b8; }
 .tag-place { background: transparent; color: var(--c-muted); border: none; font-size: 12px; padding: 0; }
 .tag-place::before { content: "—"; margin-right: 4px; color: var(--c-border); }
 .tag-photo { background: transparent; color: var(--c-muted); border: 1px solid var(--c-border); font-size: 11px; }
@@ -194,6 +197,19 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--c-bg); color: 
 .btn-cancel:hover { border-color: var(--c-ink); color: var(--c-ink); }
 .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(60px); background: #1a1410; color: #fff; padding: 10px 22px; border-radius: 24px; font-size: 13px; transition: transform 0.25s; z-index: 600; white-space: nowrap; }
 .toast.show { transform: translateX(-50%) translateY(0); }
+
+/* ===== 時代見出し・ドラッグ ===== */
+.era-heading { position: sticky; top: calc(var(--header-h) + 41px); z-index: 90; background: var(--c-tag-bg); border-top: 1px solid var(--c-border); border-bottom: 1px solid var(--c-border); padding: 8px 20px; font-family: 'Noto Serif JP', serif; font-size: 14px; font-weight: 700; color: var(--c-accent); letter-spacing: 0.08em; display: flex; align-items: center; gap: 10px; }
+.era-count { font-family: 'Noto Sans JP', sans-serif; font-size: 11px; font-weight: 400; color: var(--c-muted); background: #fff; border: 1px solid var(--c-border); border-radius: 10px; padding: 1px 9px; }
+.drag-hint { padding: 9px 20px; font-size: 12px; color: var(--c-gold); background: #fbf7ee; border-bottom: 1px solid var(--c-border); }
+.drag-hint-off { color: var(--c-muted); background: var(--c-tag-bg); }
+.drag-handle { flex-shrink: 0; cursor: grab; color: var(--c-muted); font-size: 18px; line-height: 1; padding: 2px 4px; align-self: center; user-select: none; }
+.drag-handle:active { cursor: grabbing; }
+.record.draggable .record-head { cursor: default; }
+.record.dragging { opacity: 0.5; background: var(--c-tag-bg); }
+@media (max-width: 640px) {
+  .era-heading { top: auto; position: static; padding: 7px 14px; }
+}
 </style>
 </head>
 <body>
@@ -204,6 +220,7 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--c-bg); color: 
   <div class="header-search">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
     <input type="text" id="searchInput" placeholder="名称・人物名・場所・銘文で検索…" onkeydown="if(event.key==='Enter')render()">
+    <button class="search-clear" id="searchClear" onclick="clearSearch()" title="検索をクリア" style="display:none">✕</button>
   </div>
   <button class="btn-search" onclick="render()">検索</button>
   <button class="btn-add-header" onclick="openModal()">＋ 新規追加</button>
@@ -216,10 +233,11 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--c-bg); color: 
       <div class="sidebar-item active" onclick="setCat('')" id="cat-all">すべて <span class="cnt" id="cnt-all">0</span></div>
       <div class="sidebar-divider"></div>
       <div class="sidebar-item" onclick="setCat('記念碑・石碑')" id="cat-0">記念碑・石碑 <span class="cnt" id="cnt-0">0</span></div>
-      <div class="sidebar-item" onclick="setCat('記念碑（伊勢参拝記念）')" id="cat-1">伊勢参拝記念 <span class="cnt" id="cnt-1">0</span></div>
+      <div class="sidebar-item" onclick="setCat('伊勢参拝記念')" id="cat-1">伊勢参拝記念 <span class="cnt" id="cnt-1">0</span></div>
       <div class="sidebar-item" onclick="setCat('燈篭')" id="cat-2">燈篭 <span class="cnt" id="cnt-2">0</span></div>
       <div class="sidebar-item" onclick="setCat('狛犬')" id="cat-3">狛犬 <span class="cnt" id="cnt-3">0</span></div>
       <div class="sidebar-item" onclick="setCat('鳥居・社号標')" id="cat-4">鳥居・社号標 <span class="cnt" id="cnt-4">0</span></div>
+      <div class="sidebar-item" onclick="setCat('その他')" id="cat-5">その他 <span class="cnt" id="cnt-5">0</span></div>
     </div>
     <div class="sidebar-section">
       <div class="sidebar-label">時代で絞り込み</div>
@@ -234,9 +252,12 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--c-bg); color: 
       <div class="sidebar-label">並び順</div>
       <div class="sidebar-sort">
         <select id="sortFilter" onchange="render()">
+          <option value="era_group">時代ごと（グループ表示）</option>
+          <option value="cat_group">区分ごと（グループ表示）</option>
           <option value="year_asc">古い順</option>
           <option value="year_desc">新しい順</option>
           <option value="name">名称順</option>
+          <option value="manual">手動並び替え順</option>
         </select>
       </div>
     </div>
@@ -254,10 +275,11 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--c-bg); color: 
     <div class="mobile-filter-bar" id="mobileFilterBar">
       <button class="mobile-filter-btn active" onclick="setCat('')" id="m-cat-all">すべて</button>
       <button class="mobile-filter-btn" onclick="setCat('記念碑・石碑')" id="m-cat-0">記念碑・石碑</button>
-      <button class="mobile-filter-btn" onclick="setCat('記念碑（伊勢参拝記念）')" id="m-cat-1">伊勢参拝記念</button>
+      <button class="mobile-filter-btn" onclick="setCat('伊勢参拝記念')" id="m-cat-1">伊勢参拝記念</button>
       <button class="mobile-filter-btn" onclick="setCat('燈篭')" id="m-cat-2">燈篭</button>
       <button class="mobile-filter-btn" onclick="setCat('狛犬')" id="m-cat-3">狛犬</button>
       <button class="mobile-filter-btn" onclick="setCat('鳥居・社号標')" id="m-cat-4">鳥居・社号標</button>
+      <button class="mobile-filter-btn" onclick="setCat('その他')" id="m-cat-5">その他</button>
     </div>
     <div class="results-bar">
       <span><strong id="countNum">0</strong> 件</span>
@@ -287,14 +309,14 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--c-bg); color: 
       <div class="form-2col">
         <div class="form-row"><label>種類</label>
           <select id="f_category">
-            <option>記念碑・石碑</option><option>記念碑（伊勢参拝記念）</option>
-            <option>燈篭</option><option>狛犬</option><option>鳥居・社号標</option>
+            <option>記念碑・石碑</option><option>伊勢参拝記念</option>
+            <option>燈篭</option><option>狛犬</option><option>鳥居・社号標</option><option>その他</option>
           </select>
         </div>
         <div class="form-row"><label>時代区分</label>
           <select id="f_jidai">
             <option value="">（自動）</option><option>江戸時代</option><option>明治</option>
-            <option>明治時代</option><option>大正</option><option>昭和</option><option>平成以降</option>
+            <option>大正</option><option>昭和</option><option>平成以降</option>
           </select>
         </div>
       </div>
@@ -319,11 +341,34 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const BASE_DATA = [{"sheet":"記念碑（その他）","category":"記念碑・石碑","year":0,"nendo":"不明","jidai":"","name":"諸社諸神","mei":"石尊大権現　大天狗　小天狗","basho":"榛名神社そば","honou":"","biko":"※石尊大権現とは\n神奈川県伊勢原市の大山信仰を指す 寸法:(寸法)本塔上40×24×5\n　　　台石上14×33×20\n(形態)片岩"},{"sheet":"記念碑（その他）","category":"記念碑・石碑","year":0,"nendo":"不明","jidai":"","name":"手水石","mei":"恭献","basho":"榛名神社そば","honou":"村田氏","biko":" 寸法:(寸法)本塔上33×60×30\n(形態)角型"},{"sheet":"記念碑（その他）","category":"記念碑・石碑","year":1686,"nendo":"1686（貞享3）","jidai":"江戸時代","name":"手洗石","mei":"奉納石手洗鉢\n市宿町　貞享三丙寅年九月十九日","basho":"新社務所裏庭","honou":"市宿町","biko":"※現在は平成18年竣工の新社務所の裏庭に設置 寸法:(寸法)本塔上56×96×60　(形態)角型"},{"sheet":"記念碑（その他）","category":"記念碑・石碑","year":1740,"nendo":"1740（元文5）","jidai":"江戸時代","name":"力石","mei":"奉納力石三十六貫□□　\n元文五庚申年　渋江町☐","basho":"健育塚そば","honou":"渋江町","biko":"３６貫→１３５キロ\n※力石とは力だめし，力比べをする石のことで、主に卵形の自然石を用いる。持上げた記念として姓名や重量などを石に刻んで神社に奉納する風習があった 寸法:(寸法)上45×37×26　(形態)自然石"},{"sheet":"記念碑（その他）","category":"記念碑・石碑","year":1761,"nendo":"1761（宝暦11）","jidai":"江戸時代","name":"供養塔","mei":"奉納\n敷石諸願成就如意満足所　\n九月吉祥☐\n宝暦十一辛巳年","basho":"スロープ上","honou":"久保宿町\n願主　泉屋源","biko":"拝殿へ行く敷石を諸願成就の為奉納した。その時の記念の供養塔である。 寸法:(寸法)本塔上65×14×14　　(形態)山状角柱"},{"sheet":"記念碑（その他）","category":"記念碑・石碑","year":1774,"nendo":"1774（安永3）","jidai":"江戸時代","name":"手洗石","mei":"奉納御宝前　岩槻横町　施主吉井晋人\n安永三甲午年四月吉祥日","basho":"旧社務所庭","honou":"岩槻横町\n施主吉井普人","biko":" 寸法:(寸法)31×62×62　(形態)角柱"},{"sheet":"記念碑（その他）","category":"記念碑・石碑","year":1777,"nendo":"1777(安永6)","jidai":"江戸時代","name":"常夜燈","mei":"奉献御神宝前　岩槻町惣氏子中　安永六丁目","basho":"階段横","honou":"市宿町　石工　荻原利兵衛　※萩原電気の祖先","biko":" 寸法:(寸法)本塔上173×65×64　台石①18×80×78　②上21×105×104　(形態)燈籠型"},{"sheet":"燈篭","category":"燈篭","year":1777,"nendo":"1777（安永6年）\n丁酉年12月吉日","jidai":"江戸時代","name":"常夜燈","mei":"奉献御宝前\n岩槻町惣氏子中　安永六酉年十二月吉日","basho":"手水舎近く（5）","honou":"岩槻町惣氏子中","biko":"市宿町\n萩原利兵衛\n（萩原電機の祖先） 寸法:本塔173×65×64　台石18×80×78　上21×105×104"},{"sheet":"記念碑（その他）","category":"記念碑・石碑","year":1805,"nendo":"1805（文化2）","jidai":"江戸時代","name":"猿田彦大神","mei":"文化二乙丑年四月吉日　猿田彦太神　渋江町講中","basho":"二ノ鳥居そば","honou":"渋江町・田中町","biko":"渋江の鳥居のところにあったものを昭和に入り移動した。 寸法:(寸法)本塔88×33×32　台石上28×55×52　(形態)山状角柱"},{"sheet":"記念碑（その他）","category":"記念碑・石碑","year":1811,"nendo":"1811（文化8）","jidai":"江戸時代","name":"井戸枠","mei":"久保宿街乃民　神井を記す　文化八年春　林元龍謹撰","basho":"拝殿前","honou":"久保宿町講中　斉藤平兵衛　大河内半兵衛ほか三十五名","biko":"林元龍　謹撰 寸法:(寸法)53×76×76"},{"sheet":"燈篭","category":"燈篭","year":1839,"nendo":"1839（天保10年）\n9月","jidai":"江戸時代","name":"常夜燈","mei":"奉献御神燈\n伊勢太々講連中","basho":"枯山水前　右（８）","honou":"市宿町　勝田九郎左衛門ほか","biko":" 寸法:本塔221×84×84　台石①18×89×90②62×112×113"},{"sheet":"燈篭","category":"燈篭","year":1847,"nendo":"1847（弘化4年）\n5月","jidai":"江戸時代","name":"燈篭","mei":"","basho":"枯山水前　左（８´）","honou":"","biko":""},{"sheet":"燈篭","category":"燈篭","year":1848,"nendo":"1848（嘉永元年）\n9月吉日","jidai":"江戸時代","name":"常夜燈","mei":"伊勢太々講","basho":"庚申社傍（９）","honou":"久保宿町　八百屋喜八ほか","biko":" 寸法:本塔215×70×70　台石①19×178×89②75×212×120"},{"sheet":"燈篭","category":"燈篭","year":1857,"nendo":"1857（安政4年）\n8月吉辰","jidai":"江戸時代","name":"常夜燈","mei":"伊勢太々講","basho":"庚申社傍（10）","honou":"市宿街　油屋近蔵ほか","biko":"石屋忠右衛門"},{"sheet":"記念碑（その他）","category":"記念碑・石碑","year":1863,"nendo":"1863（文久3）","jidai":"江戸時代","name":"記念碑","mei":"賽神碑　祭饌会の記念碑","basho":"階段横","honou":"発起　中島徳左衛門　百間屋長兵衛ほか","biko":"仏眼山人撰ならび篆額"},{"sheet":"燈篭","category":"燈篭","year":1863,"nendo":"1863（文久3年）\n1月吉日\n（A）","jidai":"江戸時代","name":"常夜燈","mei":"伊勢太々講","basho":"階段上（12）","honou":"市宿街　河野太右衛門ほか","biko":"石は四国のまんなり石 寸法:本塔216×74×74"},{"sheet":"記念碑（その他）","category":"記念碑・石碑","year":1878,"nendo":"1878（明治11）\n戊寅年9月19日","jidai":"明治時代","name":"手洗石","mei":"奉納","basho":"手水舎","honou":"伊勢太々講　武州岩槻町　秋森喜兵衛ほか","biko":"高橋泥舟　書\n石工　栗原禎次郎\n※幕末の三舟の一人（勝海舟・山岡鉄舟）"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1887,"nendo":"1887（明治20）","jidai":"明治","name":"伊勢太々連","mei":"伊勢太々連","basho":"絵馬掛け横","honou":"伊勢太々連　岩槻町","biko":"中根半嶺　書\n石工　橋本兼吉・栗原石光馨"},{"sheet":"記念碑（その他）","category":"記念碑・石碑","year":1893,"nendo":"1893（明治26）\n7月20日","jidai":"明治時代","name":"諸社諸神","mei":"雷電社","basho":"榛名神社そば","honou":"小島代吉・忠太郎","biko":"※雷電神社（本宮は群馬県板倉町） 寸法:(寸法)68×21×11"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1895,"nendo":"1895（明治28）\n4月","jidai":"明治","name":"奉納　畑三畝歩","mei":"奉納\n畑三畝歩(せぶ)\n伊勢代々","basho":"保育園そば","honou":"岩槻町　鈴木源兵衛ほか","biko":"三畝歩＝90坪"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1896,"nendo":"1896（明治29）\n12月","jidai":"明治","name":"従軍紀念碑","mei":"従軍紀念碑","basho":"忠魂碑前","honou":"岩槻町従軍者建之","biko":"日清戦争の記念"},{"sheet":"鳥居・社号標","category":"鳥居・社号標","year":1896,"nendo":"１８９６（明治29）","jidai":"明治","name":"渋江鳥居","mei":"奉納","basho":"渋江の入り口","honou":"伊勢太々講","biko":"平成13年頃取り外した。台座は新社務所の裏庭に使用。"},{"sheet":"鳥居・社号標","category":"鳥居・社号標","year":1896,"nendo":"１８９６（明治29）","jidai":"明治","name":"鳥居連名碑","mei":"奉納　鳥居連名碑","basho":"駐車場（18）","honou":"伊勢太々講　齋藤秀栄ほか","biko":""},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1897,"nendo":"1897（明治30）\n9月","jidai":"明治","name":"奉納　伊勢太々講中","mei":"奉納\n伊勢太々講中","basho":"本殿","honou":"伊勢太々講","biko":""},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1900,"nendo":"1900（明治33）\n9月19日","jidai":"明治","name":"伊勢大々百名講社","mei":"伊勢大々\n百名講社","basho":"二ノ鳥居","honou":"伊勢大々 百名講社　明治三十三年九月十九日建之","biko":"題篆　司法大臣清浦圭吾\n書　貴族院議員野口褧\n刻字　栗原貞次郎　田中忠次郎"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1900,"nendo":"1900（明治33）","jidai":"明治","name":"金五拾円　永代太々御神楽料","mei":"金五拾円　永代太々御神楽料　伊勢太々連","basho":"スロープ上","honou":"伊勢太々連　鈴木平吉ほか","biko":"石工　田中忠次郎"},{"sheet":"燈篭","category":"燈篭","year":1900,"nendo":"1900（明治33年）\n9月19日","jidai":"明治","name":"燈篭","mei":"伊勢太々百名講","basho":"二ノ鳥居そば（20）","honou":"伊勢太々百名講","biko":"貴族院議員野口褧書 寸法:本塔310×101×101　形態：燈篭型"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1902,"nendo":"1902（明治35）\n9月19日","jidai":"明治","name":"奉納　畑地壱段歩","mei":"奉納　畑地壱段歩","basho":"神楽殿裏手","honou":"旧横町　四代目　鈴木佐五兵衛","biko":"壱段＝300坪"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1906,"nendo":"1906（明治39）\n9月19日","jidai":"明治","name":"奉納　畑参畝歩","mei":"奉納　畑参畝歩\n伊勢太々講","basho":"保育園そば","honou":"旧渋江講中","biko":"三畝歩＝90坪"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1906,"nendo":"1906（明治39）\n10月19日","jidai":"明治","name":"明治三十七八年戦役従軍紀念碑","mei":"明治三十七八年戦役従軍紀念碑","basho":"忠魂碑前","honou":"従軍者　井野彌太郎ほか","biko":"明治三十七八年戦役＝日露戦争"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1910,"nendo":"1910（明治43）\n1月","jidai":"明治","name":"畑壱反拾四歩","mei":"畑壱反拾四歩\n外に杉苗壱千本","basho":"保育園そば","honou":"伊勢太々講","biko":"明治43年　第57回式年遷宮"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1910,"nendo":"1910（明治43）\n4月19日","jidai":"明治","name":"国有林払下紀念碑","mei":"国有林払下紀念碑","basho":"梅林","honou":"久伊豆社氏子中","biko":"鐫工　田中忠次郎"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1910,"nendo":"1910（明治43）\n5月8日","jidai":"明治","name":"奉納伊勢太々連　山林弐畝弐拾三歩","mei":"奉納伊勢太々連\n山林弐畝弐拾三歩","basho":"","honou":"伊勢太々連","biko":"山林83坪"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1914,"nendo":"1914（大正3）記念碑","jidai":"大正","name":"奉納神鏡　大山敬慎講","mei":"奉納神鏡\n大山敬慎講","basho":"","honou":"多数の寄付者氏名記載","biko":"(寸法)本塔130×89×13"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1915,"nendo":"1915（大正4）記念碑","jidai":"大正","name":"御大典記念（大正天皇）奉納五葉松弐樹","mei":"御大典記念(大正天皇)　奉納五葉松弐樹","basho":"","honou":"世話人　加藤喜太郎ほか","biko":"大正４年拝殿造営"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1915,"nendo":"1915（大正4）記念碑","jidai":"大正","name":"奉納　一金弐百円　伊勢太々講","mei":"奉納　一金弐百円　大正４年11月　伊勢太々講","basho":"","honou":"石田永吉ほか","biko":"(寸法)本塔141×73×12"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1916,"nendo":"1916（大正5）記念碑","jidai":"大正","name":"日露戦役紀念碑","mei":"日露戦役紀念碑\n陸軍大将寺内正毅書","basho":"","honou":"賛成者・分会員多数記載","biko":"岩槻小学校より移設"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1917,"nendo":"1917（大正6）記念碑","jidai":"大正","name":"奉納　畑五畝拾七歩　大山登山紀念岩千人講","mei":"奉納　畑五畝拾七歩(百六十七坪)\n大山登山紀念岩千人講","basho":"","honou":"五部構成　大人数の寄付者氏名記載","biko":"石工：田中忠次郎"},{"sheet":"燈篭","category":"燈篭","year":1918,"nendo":"1918（大正7年）\n（B）","jidai":"大正","name":"燈篭","mei":"奉献　大正七年四月\n伊勢参拝紀念","basho":"階段上　右（36）","honou":"下村喜兵衛ほか","biko":" 寸法:本塔264×84×84"},{"sheet":"記念碑（その他）","category":"記念碑・石碑","year":1920,"nendo":"1920（大正9）","jidai":"","name":"諸社諸神","mei":"白山神社","basho":"榛名神社そば","honou":"神田榮吉","biko":"※白山比咩神社（本宮：石川県白山市）"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1921,"nendo":"1921（大正10）記念碑","jidai":"大正","name":"奉献　金壱百円　永代神楽料","mei":"奉献　金壱百円\n永代神楽料　大正十年十二月十五日","basho":"","honou":"奥野木七右衛門ほか","biko":"(寸法)本塔149×64×12"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1922,"nendo":"1922（大正11）記念碑","jidai":"大正","name":"奉納　金壱百円","mei":"奉納　金壱百円\n伊勢太々講　大正十一年三月十五日","basho":"","honou":"石川次兵衛ほか","biko":""},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1922,"nendo":"1922（大正11）記念碑","jidai":"大正","name":"奉納　一金壱百円　永代神楽料","mei":"奉納　一金壱百円\n永代神楽料　大正十一年六月十五日","basho":"神札所横","honou":"堀口定吉ほか","biko":""},{"sheet":"狛犬","category":"狛犬","year":1922,"nendo":"1922（大正11年）","jidai":"大正","name":"狛犬","mei":"奉納\n伊勢太々連","basho":"二ノ鳥居前（41）","honou":"柏崎村大字加倉ほか","biko":"石工：田中忠次郎\n現存する狛犬では一番古い"},{"sheet":"記念碑（その他）","category":"記念碑・石碑","year":1924,"nendo":"1924（大正13）\n2月佳辰","jidai":"","name":"玉垣","mei":"皇太子殿下御成婚記念（昭和天皇）\n大正13年1月26日","basho":"","honou":"貴族院議員　齋藤善八","biko":"石工師　田中忠次郎"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1924,"nendo":"1924（大正13）記念碑","jidai":"大正","name":"大正三年乃至九年戦役記念碑","mei":"大正三年乃至九年戦役記念碑(42)\n陸軍砲兵大佐二味篆書","basho":"孔雀小屋横","honou":"寄付者・出征者多数記載","biko":"第一次世界大戦に参戦"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1925,"nendo":"1925（大正14）記念碑","jidai":"大正","name":"鳥居建立紀念碑","mei":"鳥居建立紀念碑(44)","basho":"石段脇","honou":"長谷川宗七ほか","biko":"奉納された鳥居は東日本大震災により倒壊"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1925,"nendo":"1925（大正14）\n9月16日\n記念碑","jidai":"大正","name":"水屋紀念碑","mei":"水屋紀念碑(45)","basho":"","honou":"下村喜兵衛ほか","biko":"大正12年9月1日の関東大震災で手水舎の屋根などが壊れたため再建した際の記念碑。"},{"sheet":"鳥居・社号標","category":"鳥居・社号標","year":1925,"nendo":"1925（大正14年）","jidai":"大正","name":"三の鳥居","mei":"奉納","basho":"拝殿前（43）","honou":"伊勢太々講\n長谷川宗七ほか","biko":"(石工)田中忠次郎\n平成23年3月11日東日本大震災で倒壊"},{"sheet":"鳥居・社号標","category":"鳥居・社号標","year":1925,"nendo":"1925（大正14年）(46)","jidai":"大正","name":"社号標","mei":"郷社久伊豆神社","basho":"御成街道沿い","honou":"伊勢太々共心講","biko":"川西実三書（正面）\n埼玉県知事斉藤守圀（右側面）"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1926,"nendo":"1926（大正15）\n４月記念碑","jidai":"昭和","name":"郷社久伊豆神社列格記念碑","mei":"郷社久伊豆神社列格記念碑(47)","basho":"枯山水","honou":"大正15年4月からの神社列格記念。岩槻町長・寄附者多数記載","biko":"(寸法)本塔322×135×18"},{"sheet":"狛犬","category":"狛犬","year":1926,"nendo":"1926（大正15年）","jidai":"昭和","name":"狛犬","mei":"奉納","basho":"拝殿前（48）","honou":"岩槻町字渋江　堀口とり","biko":""},{"sheet":"狛犬","category":"狛犬","year":1926,"nendo":"1926（大正15年）","jidai":"昭和","name":"狛犬","mei":"奉献","basho":"一の鳥居前（49）","honou":"貴族院議員\n齋藤善八","biko":"石工　田中忠次郎"},{"sheet":"鳥居・社号標","category":"鳥居・社号標","year":1927,"nendo":"1927（昭和2年）","jidai":"昭和","name":"社号標","mei":"郷社久伊豆神社","basho":"駐車場（50）","honou":"大島角蔵ほか","biko":"昭和2年1月建設"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1928,"nendo":"1928（昭和3）記念碑","jidai":"昭和","name":"御即位記念神輿再調碑","mei":"御即位記念神輿再調碑","basho":"神輿殿脇","honou":"昭和天皇即位記念。氏子負担金・特別寄付金・役員多数記載","biko":"昭和3年に作成（東雲堂・西山氏）"},{"sheet":"鳥居・社号標","category":"鳥居・社号標","year":1928,"nendo":"1928（昭和3年）","jidai":"昭和","name":"幟枠記念碑","mei":"奉納　幟枠壱対","basho":"参道入り口（52）","honou":"旧渋江町中","biko":"※幟枠本体は見当たらず"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1929,"nendo":"1929（昭和4）記念碑","jidai":"昭和","name":"奉納　花崗岩　敷拾五枚","mei":"奉納　花崗岩　敷拾五枚","basho":"","honou":"","biko":"追刻　敷石拾一枚　昭和十年(1935年)"},{"sheet":"記念碑（その他）","category":"記念碑・石碑","year":1931,"nendo":"1931（昭和6）\n12月","jidai":"","name":"神橋（神苑）","mei":"神橋","basho":"枯山水","honou":"貴族院議員　齋藤善八","biko":" 寸法:(寸法)38×94×216"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1932,"nendo":"1932（昭和7）記念碑","jidai":"昭和","name":"神苑記念碑","mei":"神苑記念碑\n鶴堂謹書","basho":"","honou":"斉藤善八","biko":"昭和6年9月19日着工。昭和7年9月18日建之。"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1933,"nendo":"1933（昭和8）記念碑","jidai":"昭和","name":"霊場消防井記念碑","mei":"霊場消防井記念碑","basho":"","honou":"岩槻消防組","biko":"昭和8年4月15日着工、5月14日竣工奉告祭挙行。石工　関野源之助刻"},{"sheet":"燈篭","category":"燈篭","year":1934,"nendo":"1934（昭和9年）\n（C）","jidai":"昭和","name":"燈篭","mei":"紀元節　\n皇太子殿下御生誕記念","basho":"左（36´）","honou":"岩槻郵便局長\n下村喜兵衛","biko":"皇太子とは平成天皇のこと 寸法:本塔264×84×84"},{"sheet":"鳥居・社号標","category":"鳥居・社号標","year":1936,"nendo":"1936（昭和11年）","jidai":"昭和","name":"二の鳥居","mei":"奉献","basho":"二ノ鳥居（57）","honou":"勲四等\n斉藤善八","biko":"石工匠　田中金三郎\n昭和11年12月9日地鎮祭・起工式"},{"sheet":"鳥居・社号標","category":"鳥居・社号標","year":1937,"nendo":"1937（昭和12年）","jidai":"昭和","name":"一の鳥居","mei":"奉献","basho":"一の鳥居（59）","honou":"岩槻町耕地整理組合関係者一同","biko":"元々は公民館前に設置。昭和43年現在の場所に移設。"},{"sheet":"鳥居・社号標","category":"鳥居・社号標","year":1937,"nendo":"1937（昭和12年）","jidai":"昭和","name":"社号標","mei":"郷社　久伊豆神社","basho":"公民館前","honou":"伊勢出雲御嶽太々記念","biko":"埼玉県知事　川西実三謹書\n石工　田中忠次郎"},{"sheet":"鳥居・社号標","category":"鳥居・社号標","year":1937,"nendo":"1937（昭和12年）","jidai":"昭和","name":"幟枠","mei":"奉献","basho":"参道入口（61）","honou":"村田雅太郎","biko":"田中石忠"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1938,"nendo":"1938（昭和13）記念碑","jidai":"昭和","name":"岩槻町耕地整理完成記念碑","mei":"岩槻町耕地整理完成記念碑","basho":"踏切のところ","honou":"岩槻町耕地整理組合役員一同","biko":"昭和8年着工、昭和12年8月完了。費用七万四千余円。"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1940,"nendo":"1940（昭和15）記念碑","jidai":"昭和","name":"紀元二千六百年　伊勢橿原神宮参拝記念碑","mei":"紀元二千六百年　伊勢橿原神宮参拝記念碑","basho":"","honou":"齋藤勘兵衛ほか","biko":"(寸法)本塔132×62×10"},{"sheet":"記念碑（参拝記念）","category":"記念碑（伊勢参拝記念）","year":1958,"nendo":"1958（昭和33）忠魂碑","jidai":"昭和","name":"忠魂碑","mei":"忠魂碑","basho":"","honou":"戦没者220余柱、建設委員多数記載","biko":"石工　田中忠次郎刻"},{"sheet":"記念碑（その他）","category":"記念碑・石碑","year":1960,"nendo":"1960(昭和35年)10月","jidai":"","name":"天水桶","mei":"奉納　岩槻市西町　昭和三十五年十月吉日","basho":"※平成元年拝殿修理の為取り外した","honou":"","biko":" 寸法:(寸法)本塔90×96×92"},{"sheet":"記念碑（その他）","category":"記念碑・石碑","year":1966,"nendo":"1966（昭和41）\n11月吉祥日","jidai":"","name":"鉄柵","mei":"奉献　大東亜戦争に依り鉄材供出の為","basho":"本殿回り","honou":"宮司　馬場栄太郎\n田中峯太郎（時の鐘製菓社長）","biko":"田中石材店\n宮本鉄工所"},{"sheet":"燈篭","category":"燈篭","year":1978,"nendo":"1978（昭和５３年）\n（D）","jidai":"昭和","name":"燈篭","mei":"奉献","basho":"階段上（66）","honou":"岩槻市本町\n寿々家　斉藤末寿","biko":"昭和53年(1978年)7月16日 寸法:本塔224×85×85"},{"sheet":"記念碑（その他）","category":"記念碑・石碑","year":1980,"nendo":"1980（昭和55）\n1月15日","jidai":"","name":"神牛","mei":"奉納　神牛","basho":"北野天満宮","honou":"馬場とよ（故馬場栄太郎名誉宮司の妻）","biko":"制作：富山県高岡市　一之瀬高級美術銅器製作所"},{"sheet":"記念碑（その他）","category":"記念碑・石碑","year":1981,"nendo":"1981（昭和56）\n2月初午","jidai":"","name":"稲荷狐","mei":"奉献　岩槻市氏子の隆昌を祈る","basho":"伏見稲荷神社","honou":"馬場栄太郎・とよ","biko":"清水家石材店"},{"sheet":"燈篭","category":"燈篭","year":1989,"nendo":"1989（平成元年）","jidai":"平成以降","name":"燈篭","mei":"奉・納","basho":"手水舎そば","honou":"勲五等双光旭日章\n新町　中島正信","biko":""},{"sheet":"狛犬","category":"狛犬","year":1993,"nendo":"1993（平成5年）","jidai":"平成以降","name":"狛犬","mei":"奉（右）\n納（左）","basho":"新社務所前","honou":"岩槻市城町1-4-1　高橋清隆・高橋久好ほか","biko":" "},{"sheet":"記念碑（その他）","category":"記念碑・石碑","year":1995,"nendo":"1995(平成7)年5月吉日","jidai":"","name":"榛名山神社","mei":"奉納　十九代当主平野達吉　株式会社山十　代表取締役平野祐次","basho":"榛名山神社","honou":"平野達吉・平野祐次","biko":"林工務店"},{"sheet":"鳥居・社号標","category":"鳥居・社号標","year":2010,"nendo":"2010(平成22年）","jidai":"平成以降","name":"社号標","mei":"武州岩槻総鎮守\n久伊豆神社","basho":"参道入り口","honou":"宮司　馬場裕彦","biko":"秩父神社宮司・京都大学名誉教授　薗田稔書"},{"sheet":"記念碑（その他）","category":"記念碑・石碑","year":2012,"nendo":"2012（平成24）","jidai":"","name":"叶い戌","mei":"","basho":"","honou":"宮司　馬場裕彦","biko":""}];
+const BASE_DATA = [{"sheet": "記念碑（その他）", "category": "記念碑・石碑", "year": 0, "nendo": "不明", "jidai": "", "name": "諸社諸神", "mei": "石尊大権現　大天狗　小天狗", "basho": "榛名神社そば", "honou": "", "biko": "※石尊大権現とは\n神奈川県伊勢原市の大山信仰を指す 寸法:(寸法)本塔上40×24×5\n　　　台石上14×33×20\n(形態)片岩"}, {"sheet": "記念碑（その他）", "category": "その他", "year": 0, "nendo": "不明", "jidai": "", "name": "手水石", "mei": "恭献", "basho": "榛名神社そば", "honou": "村田氏", "biko": " 寸法:(寸法)本塔上33×60×30\n(形態)角型"}, {"sheet": "記念碑（その他）", "category": "その他", "year": 1686, "nendo": "1686（貞享3）", "jidai": "江戸時代", "name": "手洗石", "mei": "奉納石手洗鉢\n市宿町　貞享三丙寅年九月十九日", "basho": "新社務所裏庭", "honou": "市宿町", "biko": "※現在は平成18年竣工の新社務所の裏庭に設置 寸法:(寸法)本塔上56×96×60　(形態)角型"}, {"sheet": "記念碑（その他）", "category": "その他", "year": 1740, "nendo": "1740（元文5）", "jidai": "江戸時代", "name": "力石", "mei": "奉納力石三十六貫□□　\n元文五庚申年　渋江町☐", "basho": "健育塚そば", "honou": "渋江町", "biko": "３６貫→１３５キロ\n※力石とは力だめし，力比べをする石のことで、主に卵形の自然石を用いる。持上げた記念として姓名や重量などを石に刻んで神社に奉納する風習があった 寸法:(寸法)上45×37×26　(形態)自然石"}, {"sheet": "記念碑（その他）", "category": "その他", "year": 1761, "nendo": "1761（宝暦11）", "jidai": "江戸時代", "name": "供養塔", "mei": "奉納\n敷石諸願成就如意満足所　\n九月吉祥☐\n宝暦十一辛巳年", "basho": "スロープ上", "honou": "久保宿町\n願主　泉屋源", "biko": "拝殿へ行く敷石を諸願成就の為奉納した。その時の記念の供養塔である。 寸法:(寸法)本塔上65×14×14　　(形態)山状角柱"}, {"sheet": "記念碑（その他）", "category": "その他", "year": 1774, "nendo": "1774（安永3）", "jidai": "江戸時代", "name": "手洗石", "mei": "奉納御宝前　岩槻横町　施主吉井晋人\n安永三甲午年四月吉祥日", "basho": "旧社務所庭", "honou": "岩槻横町\n施主吉井普人", "biko": " 寸法:(寸法)31×62×62　(形態)角柱"}, {"sheet": "記念碑（その他）", "category": "燈篭", "year": 1777, "nendo": "1777(安永6)", "jidai": "江戸時代", "name": "常夜燈", "mei": "奉献御神宝前　岩槻町惣氏子中　安永六丁目", "basho": "階段横", "honou": "市宿町　石工　荻原利兵衛　※萩原電気の祖先", "biko": " 寸法:(寸法)本塔上173×65×64　台石①18×80×78　②上21×105×104　(形態)燈籠型"}, {"sheet": "燈篭", "category": "燈篭", "year": 1777, "nendo": "1777（安永6年）\n丁酉年12月吉日", "jidai": "江戸時代", "name": "常夜燈", "mei": "奉献御宝前\n岩槻町惣氏子中　安永六酉年十二月吉日", "basho": "手水舎近く（5）", "honou": "岩槻町惣氏子中", "biko": "市宿町\n萩原利兵衛\n（萩原電機の祖先） 寸法:本塔173×65×64　台石18×80×78　上21×105×104"}, {"sheet": "記念碑（その他）", "category": "記念碑・石碑", "year": 1805, "nendo": "1805（文化2）", "jidai": "江戸時代", "name": "猿田彦大神", "mei": "文化二乙丑年四月吉日　猿田彦太神　渋江町講中", "basho": "二ノ鳥居そば", "honou": "渋江町・田中町", "biko": "渋江の鳥居のところにあったものを昭和に入り移動した。 寸法:(寸法)本塔88×33×32　台石上28×55×52　(形態)山状角柱"}, {"sheet": "記念碑（その他）", "category": "その他", "year": 1811, "nendo": "1811（文化8）", "jidai": "江戸時代", "name": "井戸枠", "mei": "久保宿街乃民　神井を記す　文化八年春　林元龍謹撰", "basho": "拝殿前", "honou": "久保宿町講中　斉藤平兵衛　大河内半兵衛ほか三十五名", "biko": "林元龍　謹撰 寸法:(寸法)53×76×76"}, {"sheet": "燈篭", "category": "燈篭", "year": 1839, "nendo": "1839（天保10年）\n9月", "jidai": "江戸時代", "name": "常夜燈", "mei": "奉献御神燈\n伊勢太々講連中", "basho": "枯山水前　右（８）", "honou": "市宿町　勝田九郎左衛門ほか", "biko": " 寸法:本塔221×84×84　台石①18×89×90②62×112×113"}, {"sheet": "燈篭", "category": "燈篭", "year": 1847, "nendo": "1847（弘化4年）\n5月", "jidai": "江戸時代", "name": "燈篭", "mei": "", "basho": "枯山水前　左（８´）", "honou": "", "biko": ""}, {"sheet": "燈篭", "category": "燈篭", "year": 1848, "nendo": "1848（嘉永元年）\n9月吉日", "jidai": "江戸時代", "name": "常夜燈", "mei": "伊勢太々講", "basho": "庚申社傍（９）", "honou": "久保宿町　八百屋喜八ほか", "biko": " 寸法:本塔215×70×70　台石①19×178×89②75×212×120"}, {"sheet": "燈篭", "category": "燈篭", "year": 1857, "nendo": "1857（安政4年）\n8月吉辰", "jidai": "江戸時代", "name": "常夜燈", "mei": "伊勢太々講", "basho": "庚申社傍（10）", "honou": "市宿街　油屋近蔵ほか", "biko": "石屋忠右衛門"}, {"sheet": "記念碑（その他）", "category": "記念碑・石碑", "year": 1863, "nendo": "1863（文久3）", "jidai": "江戸時代", "name": "記念碑", "mei": "賽神碑　祭饌会の記念碑", "basho": "階段横", "honou": "発起　中島徳左衛門　百間屋長兵衛ほか", "biko": "仏眼山人撰ならび篆額"}, {"sheet": "燈篭", "category": "燈篭", "year": 1863, "nendo": "1863（文久3年）\n1月吉日\n（A）", "jidai": "江戸時代", "name": "常夜燈", "mei": "伊勢太々講", "basho": "階段上（12）", "honou": "市宿街　河野太右衛門ほか", "biko": "石は四国のまんなり石 寸法:本塔216×74×74"}, {"sheet": "記念碑（その他）", "category": "その他", "year": 1878, "nendo": "1878（明治11）\n戊寅年9月19日", "jidai": "明治時代", "name": "手洗石", "mei": "奉納", "basho": "手水舎", "honou": "伊勢太々講　武州岩槻町　秋森喜兵衛ほか", "biko": "高橋泥舟　書\n石工　栗原禎次郎\n※幕末の三舟の一人（勝海舟・山岡鉄舟）"}, {"sheet": "記念碑（参拝記念）", "category": "伊勢参拝記念", "year": 1887, "nendo": "1887（明治20）", "jidai": "明治", "name": "伊勢太々連", "mei": "伊勢太々連", "basho": "絵馬掛け横", "honou": "伊勢太々連　岩槻町", "biko": "中根半嶺　書\n石工　橋本兼吉・栗原石光馨"}, {"sheet": "記念碑（その他）", "category": "記念碑・石碑", "year": 1893, "nendo": "1893（明治26）\n7月20日", "jidai": "明治時代", "name": "諸社諸神", "mei": "雷電社", "basho": "榛名神社そば", "honou": "小島代吉・忠太郎", "biko": "※雷電神社（本宮は群馬県板倉町） 寸法:(寸法)68×21×11"}, {"sheet": "記念碑（参拝記念）", "category": "伊勢参拝記念", "year": 1895, "nendo": "1895（明治28）\n4月", "jidai": "明治", "name": "奉納　畑三畝歩", "mei": "奉納\n畑三畝歩(せぶ)\n伊勢代々", "basho": "保育園そば", "honou": "岩槻町　鈴木源兵衛ほか", "biko": "三畝歩＝90坪"}, {"sheet": "記念碑（参拝記念）", "category": "記念碑・石碑", "year": 1896, "nendo": "1896（明治29）\n12月", "jidai": "明治", "name": "従軍紀念碑", "mei": "従軍紀念碑", "basho": "忠魂碑前", "honou": "岩槻町従軍者建之", "biko": "日清戦争の記念"}, {"sheet": "鳥居・社号標", "category": "鳥居・社号標", "year": 1896, "nendo": "１８９６（明治29）", "jidai": "明治", "name": "渋江鳥居", "mei": "奉納", "basho": "渋江の入り口", "honou": "伊勢太々講", "biko": "平成13年頃取り外した。台座は新社務所の裏庭に使用。"}, {"sheet": "鳥居・社号標", "category": "鳥居・社号標", "year": 1896, "nendo": "１８９６（明治29）", "jidai": "明治", "name": "鳥居連名碑", "mei": "奉納　鳥居連名碑", "basho": "駐車場（18）", "honou": "伊勢太々講　齋藤秀栄ほか", "biko": ""}, {"sheet": "記念碑（参拝記念）", "category": "伊勢参拝記念", "year": 1897, "nendo": "1897（明治30）\n9月", "jidai": "明治", "name": "奉納　伊勢太々講中", "mei": "奉納\n伊勢太々講中", "basho": "本殿", "honou": "伊勢太々講", "biko": ""}, {"sheet": "記念碑（参拝記念）", "category": "伊勢参拝記念", "year": 1900, "nendo": "1900（明治33）\n9月19日", "jidai": "明治", "name": "伊勢大々百名講社", "mei": "伊勢大々\n百名講社", "basho": "二ノ鳥居", "honou": "伊勢大々 百名講社　明治三十三年九月十九日建之", "biko": "題篆　司法大臣清浦圭吾\n書　貴族院議員野口褧\n刻字　栗原貞次郎　田中忠次郎"}, {"sheet": "記念碑（参拝記念）", "category": "伊勢参拝記念", "year": 1900, "nendo": "1900（明治33）", "jidai": "明治", "name": "金五拾円　永代太々御神楽料", "mei": "金五拾円　永代太々御神楽料　伊勢太々連", "basho": "スロープ上", "honou": "伊勢太々連　鈴木平吉ほか", "biko": "石工　田中忠次郎"}, {"sheet": "燈篭", "category": "燈篭", "year": 1900, "nendo": "1900（明治33年）\n9月19日", "jidai": "明治", "name": "燈篭", "mei": "伊勢太々百名講", "basho": "二ノ鳥居そば（20）", "honou": "伊勢太々百名講", "biko": "貴族院議員野口褧書 寸法:本塔310×101×101　形態：燈篭型"}, {"sheet": "記念碑（参拝記念）", "category": "伊勢参拝記念", "year": 1902, "nendo": "1902（明治35）\n9月19日", "jidai": "明治", "name": "奉納　畑地壱段歩", "mei": "奉納　畑地壱段歩", "basho": "神楽殿裏手", "honou": "旧横町　四代目　鈴木佐五兵衛", "biko": "壱段＝300坪"}, {"sheet": "記念碑（参拝記念）", "category": "伊勢参拝記念", "year": 1906, "nendo": "1906（明治39）\n9月19日", "jidai": "明治", "name": "奉納　畑参畝歩", "mei": "奉納　畑参畝歩\n伊勢太々講", "basho": "保育園そば", "honou": "旧渋江講中", "biko": "三畝歩＝90坪"}, {"sheet": "記念碑（参拝記念）", "category": "記念碑・石碑", "year": 1906, "nendo": "1906（明治39）\n10月19日", "jidai": "明治", "name": "明治三十七八年戦役従軍紀念碑", "mei": "明治三十七八年戦役従軍紀念碑", "basho": "忠魂碑前", "honou": "従軍者　井野彌太郎ほか", "biko": "明治三十七八年戦役＝日露戦争"}, {"sheet": "記念碑（参拝記念）", "category": "伊勢参拝記念", "year": 1910, "nendo": "1910（明治43）\n1月", "jidai": "明治", "name": "畑壱反拾四歩", "mei": "畑壱反拾四歩\n外に杉苗壱千本", "basho": "保育園そば", "honou": "伊勢太々講", "biko": "明治43年　第57回式年遷宮"}, {"sheet": "記念碑（参拝記念）", "category": "記念碑・石碑", "year": 1910, "nendo": "1910（明治43）\n4月19日", "jidai": "明治", "name": "国有林払下紀念碑", "mei": "国有林払下紀念碑", "basho": "梅林", "honou": "久伊豆社氏子中", "biko": "鐫工　田中忠次郎"}, {"sheet": "記念碑（参拝記念）", "category": "伊勢参拝記念", "year": 1910, "nendo": "1910（明治43）\n5月8日", "jidai": "明治", "name": "奉納伊勢太々連　山林弐畝弐拾三歩", "mei": "奉納伊勢太々連\n山林弐畝弐拾三歩", "basho": "", "honou": "伊勢太々連", "biko": "山林83坪"}, {"sheet": "記念碑（参拝記念）", "category": "伊勢参拝記念", "year": 1914, "nendo": "1914（大正3）記念碑", "jidai": "大正", "name": "奉納神鏡　大山敬慎講", "mei": "奉納神鏡\n大山敬慎講", "basho": "", "honou": "多数の寄付者氏名記載", "biko": "(寸法)本塔130×89×13"}, {"sheet": "記念碑（参拝記念）", "category": "記念碑・石碑", "year": 1915, "nendo": "1915（大正4）記念碑", "jidai": "大正", "name": "御大典記念（大正天皇）奉納五葉松弐樹", "mei": "御大典記念(大正天皇)　奉納五葉松弐樹", "basho": "", "honou": "世話人　加藤喜太郎ほか", "biko": "大正４年拝殿造営"}, {"sheet": "記念碑（参拝記念）", "category": "伊勢参拝記念", "year": 1915, "nendo": "1915（大正4）記念碑", "jidai": "大正", "name": "奉納　一金弐百円　伊勢太々講", "mei": "奉納　一金弐百円　大正４年11月　伊勢太々講", "basho": "", "honou": "石田永吉ほか", "biko": "(寸法)本塔141×73×12"}, {"sheet": "記念碑（参拝記念）", "category": "記念碑・石碑", "year": 1916, "nendo": "1916（大正5）記念碑", "jidai": "大正", "name": "日露戦役紀念碑", "mei": "日露戦役紀念碑\n陸軍大将寺内正毅書", "basho": "", "honou": "賛成者・分会員多数記載", "biko": "岩槻小学校より移設"}, {"sheet": "記念碑（参拝記念）", "category": "伊勢参拝記念", "year": 1917, "nendo": "1917（大正6）記念碑", "jidai": "大正", "name": "奉納　畑五畝拾七歩　大山登山紀念岩千人講", "mei": "奉納　畑五畝拾七歩(百六十七坪)\n大山登山紀念岩千人講", "basho": "", "honou": "五部構成　大人数の寄付者氏名記載", "biko": "石工：田中忠次郎"}, {"sheet": "燈篭", "category": "燈篭", "year": 1918, "nendo": "1918（大正7年）\n（B）", "jidai": "大正", "name": "燈篭", "mei": "奉献　大正七年四月\n伊勢参拝紀念", "basho": "階段上　右（36）", "honou": "下村喜兵衛ほか", "biko": " 寸法:本塔264×84×84"}, {"sheet": "記念碑（その他）", "category": "記念碑・石碑", "year": 1920, "nendo": "1920（大正9）", "jidai": "", "name": "諸社諸神", "mei": "白山神社", "basho": "榛名神社そば", "honou": "神田榮吉", "biko": "※白山比咩神社（本宮：石川県白山市）"}, {"sheet": "記念碑（参拝記念）", "category": "伊勢参拝記念", "year": 1921, "nendo": "1921（大正10）記念碑", "jidai": "大正", "name": "奉献　金壱百円　永代神楽料", "mei": "奉献　金壱百円\n永代神楽料　大正十年十二月十五日", "basho": "", "honou": "奥野木七右衛門ほか", "biko": "(寸法)本塔149×64×12"}, {"sheet": "記念碑（参拝記念）", "category": "伊勢参拝記念", "year": 1922, "nendo": "1922（大正11）記念碑", "jidai": "大正", "name": "奉納　金壱百円", "mei": "奉納　金壱百円\n伊勢太々講　大正十一年三月十五日", "basho": "", "honou": "石川次兵衛ほか", "biko": ""}, {"sheet": "記念碑（参拝記念）", "category": "伊勢参拝記念", "year": 1922, "nendo": "1922（大正11）記念碑", "jidai": "大正", "name": "奉納　一金壱百円　永代神楽料", "mei": "奉納　一金壱百円\n永代神楽料　大正十一年六月十五日", "basho": "神札所横", "honou": "堀口定吉ほか", "biko": ""}, {"sheet": "狛犬", "category": "狛犬", "year": 1922, "nendo": "1922（大正11年）", "jidai": "大正", "name": "狛犬", "mei": "奉納\n伊勢太々連", "basho": "二ノ鳥居前（41）", "honou": "柏崎村大字加倉ほか", "biko": "石工：田中忠次郎\n現存する狛犬では一番古い"}, {"sheet": "記念碑（その他）", "category": "その他", "year": 1924, "nendo": "1924（大正13）\n2月佳辰", "jidai": "", "name": "玉垣", "mei": "皇太子殿下御成婚記念（昭和天皇）\n大正13年1月26日", "basho": "", "honou": "貴族院議員　齋藤善八", "biko": "石工師　田中忠次郎"}, {"sheet": "記念碑（参拝記念）", "category": "記念碑・石碑", "year": 1924, "nendo": "1924（大正13）記念碑", "jidai": "大正", "name": "大正三年乃至九年戦役記念碑", "mei": "大正三年乃至九年戦役記念碑(42)\n陸軍砲兵大佐二味篆書", "basho": "孔雀小屋横", "honou": "寄付者・出征者多数記載", "biko": "第一次世界大戦に参戦"}, {"sheet": "記念碑（参拝記念）", "category": "記念碑・石碑", "year": 1925, "nendo": "1925（大正14）記念碑", "jidai": "大正", "name": "鳥居建立紀念碑", "mei": "鳥居建立紀念碑(44)", "basho": "石段脇", "honou": "長谷川宗七ほか", "biko": "奉納された鳥居は東日本大震災により倒壊"}, {"sheet": "記念碑（参拝記念）", "category": "記念碑・石碑", "year": 1925, "nendo": "1925（大正14）\n9月16日\n記念碑", "jidai": "大正", "name": "水屋紀念碑", "mei": "水屋紀念碑(45)", "basho": "", "honou": "下村喜兵衛ほか", "biko": "大正12年9月1日の関東大震災で手水舎の屋根などが壊れたため再建した際の記念碑。"}, {"sheet": "鳥居・社号標", "category": "鳥居・社号標", "year": 1925, "nendo": "1925（大正14年）", "jidai": "大正", "name": "三の鳥居", "mei": "奉納", "basho": "拝殿前（43）", "honou": "伊勢太々講\n長谷川宗七ほか", "biko": "(石工)田中忠次郎\n平成23年3月11日東日本大震災で倒壊"}, {"sheet": "鳥居・社号標", "category": "鳥居・社号標", "year": 1925, "nendo": "1925（大正14年）(46)", "jidai": "大正", "name": "社号標", "mei": "郷社久伊豆神社", "basho": "御成街道沿い", "honou": "伊勢太々共心講", "biko": "川西実三書（正面）\n埼玉県知事斉藤守圀（右側面）"}, {"sheet": "記念碑（参拝記念）", "category": "記念碑・石碑", "year": 1926, "nendo": "1926（大正15）\n４月記念碑", "jidai": "昭和", "name": "郷社久伊豆神社列格記念碑", "mei": "郷社久伊豆神社列格記念碑(47)", "basho": "枯山水", "honou": "大正15年4月からの神社列格記念。岩槻町長・寄附者多数記載", "biko": "(寸法)本塔322×135×18"}, {"sheet": "狛犬", "category": "狛犬", "year": 1926, "nendo": "1926（大正15年）", "jidai": "昭和", "name": "狛犬", "mei": "奉納", "basho": "拝殿前（48）", "honou": "岩槻町字渋江　堀口とり", "biko": ""}, {"sheet": "狛犬", "category": "狛犬", "year": 1926, "nendo": "1926（大正15年）", "jidai": "昭和", "name": "狛犬", "mei": "奉献", "basho": "一の鳥居前（49）", "honou": "貴族院議員\n齋藤善八", "biko": "石工　田中忠次郎"}, {"sheet": "鳥居・社号標", "category": "鳥居・社号標", "year": 1927, "nendo": "1927（昭和2年）", "jidai": "昭和", "name": "社号標", "mei": "郷社久伊豆神社", "basho": "駐車場（50）", "honou": "大島角蔵ほか", "biko": "昭和2年1月建設"}, {"sheet": "記念碑（参拝記念）", "category": "記念碑・石碑", "year": 1928, "nendo": "1928（昭和3）記念碑", "jidai": "昭和", "name": "御即位記念神輿再調碑", "mei": "御即位記念神輿再調碑", "basho": "神輿殿脇", "honou": "昭和天皇即位記念。氏子負担金・特別寄付金・役員多数記載", "biko": "昭和3年に作成（東雲堂・西山氏）"}, {"sheet": "鳥居・社号標", "category": "鳥居・社号標", "year": 1928, "nendo": "1928（昭和3年）", "jidai": "昭和", "name": "幟枠記念碑", "mei": "奉納　幟枠壱対", "basho": "参道入り口（52）", "honou": "旧渋江町中", "biko": "※幟枠本体は見当たらず"}, {"sheet": "記念碑（参拝記念）", "category": "その他", "year": 1929, "nendo": "1929（昭和4）記念碑", "jidai": "昭和", "name": "奉納　花崗岩　敷拾五枚", "mei": "奉納　花崗岩　敷拾五枚", "basho": "", "honou": "", "biko": "追刻　敷石拾一枚　昭和十年(1935年)"}, {"sheet": "記念碑（その他）", "category": "その他", "year": 1931, "nendo": "1931（昭和6）\n12月", "jidai": "", "name": "神橋（神苑）", "mei": "神橋", "basho": "枯山水", "honou": "貴族院議員　齋藤善八", "biko": " 寸法:(寸法)38×94×216"}, {"sheet": "記念碑（参拝記念）", "category": "記念碑・石碑", "year": 1932, "nendo": "1932（昭和7）記念碑", "jidai": "昭和", "name": "神苑記念碑", "mei": "神苑記念碑\n鶴堂謹書", "basho": "", "honou": "斉藤善八", "biko": "昭和6年9月19日着工。昭和7年9月18日建之。"}, {"sheet": "記念碑（参拝記念）", "category": "記念碑・石碑", "year": 1933, "nendo": "1933（昭和8）記念碑", "jidai": "昭和", "name": "霊場消防井記念碑", "mei": "霊場消防井記念碑", "basho": "", "honou": "岩槻消防組", "biko": "昭和8年4月15日着工、5月14日竣工奉告祭挙行。石工　関野源之助刻"}, {"sheet": "燈篭", "category": "燈篭", "year": 1934, "nendo": "1934（昭和9年）\n（C）", "jidai": "昭和", "name": "燈篭", "mei": "紀元節　\n皇太子殿下御生誕記念", "basho": "左（36´）", "honou": "岩槻郵便局長\n下村喜兵衛", "biko": "皇太子とは平成天皇のこと 寸法:本塔264×84×84"}, {"sheet": "鳥居・社号標", "category": "鳥居・社号標", "year": 1936, "nendo": "1936（昭和11年）", "jidai": "昭和", "name": "二の鳥居", "mei": "奉献", "basho": "二ノ鳥居（57）", "honou": "勲四等\n斉藤善八", "biko": "石工匠　田中金三郎\n昭和11年12月9日地鎮祭・起工式"}, {"sheet": "鳥居・社号標", "category": "鳥居・社号標", "year": 1937, "nendo": "1937（昭和12年）", "jidai": "昭和", "name": "一の鳥居", "mei": "奉献", "basho": "一の鳥居（59）", "honou": "岩槻町耕地整理組合関係者一同", "biko": "元々は公民館前に設置。昭和43年現在の場所に移設。"}, {"sheet": "鳥居・社号標", "category": "鳥居・社号標", "year": 1937, "nendo": "1937（昭和12年）", "jidai": "昭和", "name": "社号標", "mei": "郷社　久伊豆神社", "basho": "公民館前", "honou": "伊勢出雲御嶽太々記念", "biko": "埼玉県知事　川西実三謹書\n石工　田中忠次郎"}, {"sheet": "鳥居・社号標", "category": "鳥居・社号標", "year": 1937, "nendo": "1937（昭和12年）", "jidai": "昭和", "name": "幟枠", "mei": "奉献", "basho": "参道入口（61）", "honou": "村田雅太郎", "biko": "田中石忠"}, {"sheet": "記念碑（参拝記念）", "category": "記念碑・石碑", "year": 1938, "nendo": "1938（昭和13）記念碑", "jidai": "昭和", "name": "岩槻町耕地整理完成記念碑", "mei": "岩槻町耕地整理完成記念碑", "basho": "踏切のところ", "honou": "岩槻町耕地整理組合役員一同", "biko": "昭和8年着工、昭和12年8月完了。費用七万四千余円。"}, {"sheet": "記念碑（参拝記念）", "category": "伊勢参拝記念", "year": 1940, "nendo": "1940（昭和15）記念碑", "jidai": "昭和", "name": "紀元二千六百年　伊勢橿原神宮参拝記念碑", "mei": "紀元二千六百年　伊勢橿原神宮参拝記念碑", "basho": "", "honou": "齋藤勘兵衛ほか", "biko": "(寸法)本塔132×62×10"}, {"sheet": "記念碑（参拝記念）", "category": "記念碑・石碑", "year": 1958, "nendo": "1958（昭和33）忠魂碑", "jidai": "昭和", "name": "忠魂碑", "mei": "忠魂碑", "basho": "", "honou": "戦没者220余柱、建設委員多数記載", "biko": "石工　田中忠次郎刻"}, {"sheet": "記念碑（その他）", "category": "その他", "year": 1960, "nendo": "1960(昭和35年)10月", "jidai": "", "name": "天水桶", "mei": "奉納　岩槻市西町　昭和三十五年十月吉日", "basho": "※平成元年拝殿修理の為取り外した", "honou": "", "biko": " 寸法:(寸法)本塔90×96×92"}, {"sheet": "記念碑（その他）", "category": "その他", "year": 1966, "nendo": "1966（昭和41）\n11月吉祥日", "jidai": "", "name": "鉄柵", "mei": "奉献　大東亜戦争に依り鉄材供出の為", "basho": "本殿回り", "honou": "宮司　馬場栄太郎\n田中峯太郎（時の鐘製菓社長）", "biko": "田中石材店\n宮本鉄工所"}, {"sheet": "燈篭", "category": "燈篭", "year": 1978, "nendo": "1978（昭和５３年）\n（D）", "jidai": "昭和", "name": "燈篭", "mei": "奉献", "basho": "階段上（66）", "honou": "岩槻市本町\n寿々家　斉藤末寿", "biko": "昭和53年(1978年)7月16日 寸法:本塔224×85×85"}, {"sheet": "記念碑（その他）", "category": "その他", "year": 1980, "nendo": "1980（昭和55）\n1月15日", "jidai": "", "name": "神牛", "mei": "奉納　神牛", "basho": "北野天満宮", "honou": "馬場とよ（故馬場栄太郎名誉宮司の妻）", "biko": "制作：富山県高岡市　一之瀬高級美術銅器製作所"}, {"sheet": "記念碑（その他）", "category": "その他", "year": 1981, "nendo": "1981（昭和56）\n2月初午", "jidai": "", "name": "稲荷狐", "mei": "奉献　岩槻市氏子の隆昌を祈る", "basho": "伏見稲荷神社", "honou": "馬場栄太郎・とよ", "biko": "清水家石材店"}, {"sheet": "燈篭", "category": "燈篭", "year": 1989, "nendo": "1989（平成元年）", "jidai": "平成以降", "name": "燈篭", "mei": "奉・納", "basho": "手水舎そば", "honou": "勲五等双光旭日章\n新町　中島正信", "biko": ""}, {"sheet": "狛犬", "category": "狛犬", "year": 1993, "nendo": "1993（平成5年）", "jidai": "平成以降", "name": "狛犬", "mei": "奉（右）\n納（左）", "basho": "新社務所前", "honou": "岩槻市城町1-4-1　高橋清隆・高橋久好ほか", "biko": " "}, {"sheet": "記念碑（その他）", "category": "記念碑・石碑", "year": 1995, "nendo": "1995(平成7)年5月吉日", "jidai": "", "name": "榛名山神社", "mei": "奉納　十九代当主平野達吉　株式会社山十　代表取締役平野祐次", "basho": "榛名山神社", "honou": "平野達吉・平野祐次", "biko": "林工務店"}, {"sheet": "鳥居・社号標", "category": "鳥居・社号標", "year": 2010, "nendo": "2010(平成22年）", "jidai": "平成以降", "name": "社号標", "mei": "武州岩槻総鎮守\n久伊豆神社", "basho": "参道入り口", "honou": "宮司　馬場裕彦", "biko": "秩父神社宮司・京都大学名誉教授　薗田稔書"}, {"sheet": "記念碑（その他）", "category": "その他", "year": 2012, "nendo": "2012（平成24）", "jidai": "", "name": "叶い戌", "mei": "", "basho": "", "honou": "宮司　馬場裕彦", "biko": ""}];
 
 let DB = [];
 let currentCat = '';
 let currentJidai = '';
+
+// 時代区分の順序（グループ表示・並びに使用）
+const ERA_ORDER = ['江戸時代','明治','大正','昭和','平成以降','不明'];
+
+// 区分の順序（グループ表示・並びに使用）
+const CAT_ORDER = ['記念碑・石碑','伊勢参拝記念','燈篭','狛犬','鳥居・社号標','その他'];
+
+// 西暦から時代区分を判定（空欄補完・新規追加時に使用）
+function eraFromYear(y) {
+  if (!y || y === 0) return '不明';
+  if (y <= 1867) return '江戸時代';
+  if (y <= 1911) return '明治';
+  if (y <= 1925) return '大正';
+  if (y <= 1988) return '昭和';
+  return '平成以降';
+}
+
+// 時代区分の表記を正規化（「明治時代」→「明治」、空欄は西暦から補完）
+function normalizeEra(jidai, year) {
+  if (jidai === '明治時代') return '明治';
+  if (!jidai || jidai.trim() === '') return eraFromYear(year);
+  return jidai;
+}
 
 // ===== データ =====
 async function initDB() {
@@ -333,10 +378,12 @@ async function initDB() {
     if (error) throw error;
     if (data.length === 0) {
       setSyncStatus('loading', '初期データ投入中…');
-      const records = BASE_DATA.map(r => ({
-        year: r.year || null, nendo: r.nendo || null, jidai: r.jidai || null,
+      const records = BASE_DATA.map((r, i) => ({
+        year: r.year || null, nendo: r.nendo || null,
+        jidai: normalizeEra(r.jidai, r.year),
         category: r.category || null, name: r.name || null, basho: r.basho || null,
         mei: r.mei || null, honou: r.honou || null, biko: r.biko || null, photos: [],
+        sort_order: (i + 1) * 10,
       }));
       const { error: insertError } = await db.from('monuments').insert(records);
       if (insertError) throw insertError;
@@ -345,6 +392,8 @@ async function initDB() {
     } else {
       DB = data;
     }
+    // 表示前に時代区分の表記を正規化（「明治時代」統一・空欄補完）
+    DB.forEach(r => { r.jidai = normalizeEra(r.jidai, r.year); });
     setSyncStatus('ok', '同期済み ✓');
     render();
     updateInfo();
@@ -368,9 +417,9 @@ function updateInfo() {
 // ===== 表示 =====
 function setCat(v) {
   currentCat = v;
-  ['cat-all','cat-0','cat-1','cat-2','cat-3','cat-4'].forEach(id => document.getElementById(id)?.classList.remove('active'));
-  ['m-cat-all','m-cat-0','m-cat-1','m-cat-2','m-cat-3','m-cat-4'].forEach(id => document.getElementById(id)?.classList.remove('active'));
-  const cats = ['','記念碑・石碑','記念碑（伊勢参拝記念）','燈篭','狛犬','鳥居・社号標'];
+  ['cat-all','cat-0','cat-1','cat-2','cat-3','cat-4','cat-5'].forEach(id => document.getElementById(id)?.classList.remove('active'));
+  ['m-cat-all','m-cat-0','m-cat-1','m-cat-2','m-cat-3','m-cat-4','m-cat-5'].forEach(id => document.getElementById(id)?.classList.remove('active'));
+  const cats = ['','記念碑・石碑','伊勢参拝記念','燈篭','狛犬','鳥居・社号標','その他'];
   const idx = cats.indexOf(v);
   document.getElementById(idx === 0 ? 'cat-all' : 'cat-'+(idx-1))?.classList.add('active');
   document.getElementById(idx === 0 ? 'm-cat-all' : 'm-cat-'+(idx-1))?.classList.add('active');
@@ -382,6 +431,11 @@ function setJidai(v) {
   const eras = ['','江戸時代','明治','大正','昭和','平成以降'];
   const idx = eras.indexOf(v);
   document.getElementById(idx === 0 ? 'era-all' : 'era-'+(idx-1))?.classList.add('active');
+  render();
+}
+
+function clearSearch() {
+  document.getElementById('searchInput').value = '';
   render();
 }
 
@@ -403,20 +457,47 @@ function render() {
     }
     return true;
   });
+  const eraGroup = (sort === 'era_group');
+  const catGroup = (sort === 'cat_group');
   if (sort === 'year_asc') list.sort((a,b) => (a.year||9999)-(b.year||9999));
   else if (sort === 'year_desc') list.sort((a,b) => (b.year||0)-(a.year||0));
-  else list.sort((a,b) => (a.name||'').localeCompare(b.name||'','ja'));
+  else if (sort === 'name') list.sort((a,b) => (a.name||'').localeCompare(b.name||'','ja'));
+  else if (sort === 'era_group') {
+    // 時代の順（江戸→明治→…）で並べ、同一時代内は年代順
+    list.sort((a,b) => {
+      const ea = ERA_ORDER.indexOf(a.jidai), eb = ERA_ORDER.indexOf(b.jidai);
+      const ia = ea < 0 ? ERA_ORDER.length : ea, ib = eb < 0 ? ERA_ORDER.length : eb;
+      if (ia !== ib) return ia - ib;
+      return (a.year||9999) - (b.year||9999);
+    });
+  }
+  else if (sort === 'cat_group') {
+    // 区分の順で並べ、同一区分内は年代順（古い→新しい）
+    list.sort((a,b) => {
+      const ca = CAT_ORDER.indexOf(a.category), cb = CAT_ORDER.indexOf(b.category);
+      const ia = ca < 0 ? CAT_ORDER.length : ca, ib = cb < 0 ? CAT_ORDER.length : cb;
+      if (ia !== ib) return ia - ib;
+      return (a.year||9999) - (b.year||9999);
+    });
+  }
+  else list.sort((a,b) => (a.sort_order??9e9)-(b.sort_order??9e9) || (a.id||0)-(b.id||0));
 
-  const counts = {'':DB.length,'記念碑・石碑':0,'記念碑（伊勢参拝記念）':0,'燈篭':0,'狛犬':0,'鳥居・社号標':0};
+  // 手動並び替えが有効なのは「手動並び替え順」かつ絞り込み・検索なしのときのみ
+  const dragEnabled = (sort === 'manual' && !q && !currentCat && !currentJidai);
+
+  const counts = {'':DB.length,'記念碑・石碑':0,'伊勢参拝記念':0,'燈篭':0,'狛犬':0,'鳥居・社号標':0,'その他':0};
   DB.forEach(r => { if (counts[r.category] !== undefined) counts[r.category]++; });
   document.getElementById('cnt-all').textContent = counts[''];
   document.getElementById('cnt-0').textContent = counts['記念碑・石碑'];
-  document.getElementById('cnt-1').textContent = counts['記念碑（伊勢参拝記念）'];
+  document.getElementById('cnt-1').textContent = counts['伊勢参拝記念'];
   document.getElementById('cnt-2').textContent = counts['燈篭'];
   document.getElementById('cnt-3').textContent = counts['狛犬'];
   document.getElementById('cnt-4').textContent = counts['鳥居・社号標'];
+  document.getElementById('cnt-5').textContent = counts['その他'];
   document.getElementById('countNum').textContent = list.length;
   document.getElementById('filterBadge').style.display = (q || currentCat || currentJidai) ? 'inline-block' : 'none';
+  const clearBtn = document.getElementById('searchClear');
+  if (clearBtn) clearBtn.style.display = document.getElementById('searchInput').value.trim() ? 'flex' : 'none';
 
   const rawQ = document.getElementById('searchInput').value.trim();
   const container = document.getElementById('results');
@@ -424,12 +505,63 @@ function render() {
     container.innerHTML = `<div class="empty">見つかりませんでした。</div>`;
     return;
   }
-  container.innerHTML = list.map((r, i) => {
-    const catCls = 'tag-cat-' + r.category;
-    const photos = r.photos || [];
-    return `<div class="record" id="rec-${r.id}">
+  const hintHtml = dragEnabled
+    ? `<div class="drag-hint">≡ ハンドルをつかんで上下にドラッグすると順番を変更できます（自動保存）</div>`
+    : (sort === 'manual' && (q || currentCat || currentJidai)
+        ? `<div class="drag-hint drag-hint-off">※ 並べ替えは、検索・絞り込みを解除した状態でのみ可能です</div>`
+        : '');
+
+  if (eraGroup) {
+    // 時代ごとに見出しを挟んで表示
+    let html = hintHtml;
+    let curEra = null;
+    let counter = 0;
+    list.forEach(r => {
+      const era = ERA_ORDER.includes(r.jidai) ? r.jidai : '不明';
+      if (era !== curEra) {
+        const n = list.filter(x => (ERA_ORDER.includes(x.jidai) ? x.jidai : '不明') === era).length;
+        html += `<div class="era-heading">${era}<span class="era-count">${n}件</span></div>`;
+        curEra = era;
+      }
+      counter++;
+      html += recordHtml(r, counter, rawQ, false);
+    });
+    container.innerHTML = html;
+    return;
+  }
+
+  if (catGroup) {
+    // 区分ごとに見出しを挟んで表示（各区分内は年代順）
+    let html = hintHtml;
+    let curCat = null;
+    let counter = 0;
+    list.forEach(r => {
+      const cat = CAT_ORDER.includes(r.category) ? r.category : 'その他';
+      if (cat !== curCat) {
+        const n = list.filter(x => (CAT_ORDER.includes(x.category) ? x.category : 'その他') === cat).length;
+        html += `<div class="era-heading">${cat}<span class="era-count">${n}件</span></div>`;
+        curCat = cat;
+      }
+      counter++;
+      html += recordHtml(r, counter, rawQ, false);
+    });
+    container.innerHTML = html;
+    return;
+  }
+
+  container.innerHTML = hintHtml + list.map((r, i) => recordHtml(r, i + 1, rawQ, dragEnabled)).join('');
+
+  if (dragEnabled) setupDragAndDrop();
+}
+
+// レコード1件分のHTMLを生成
+function recordHtml(r, num, rawQ, dragEnabled) {
+  const catCls = 'tag-cat-' + r.category;
+  const photos = r.photos || [];
+  return `<div class="record${dragEnabled ? ' draggable' : ''}" id="rec-${r.id}" data-id="${r.id}"${dragEnabled ? ' draggable="true"' : ''}>
       <div class="record-head" onclick="toggleRec(${r.id})">
-        <div class="record-num">${i+1}</div>
+        ${dragEnabled ? `<div class="drag-handle" onclick="event.stopPropagation()" title="ドラッグして並べ替え">≡</div>` : ''}
+        <div class="record-num">${num}</div>
         <div class="record-body">
           <div class="record-title">${hl(r.name||'（名称不明）', rawQ)}</div>
           <div class="record-meta">
@@ -460,7 +592,71 @@ function render() {
         <button class="record-close-btn" onclick="toggleRec(${r.id})">▲ 閉じる</button>
       </div>
     </div>`;
-  }).join('');
+}
+
+// ===== ドラッグ&ドロップ並び替え =====
+let dragSrcEl = null;
+
+function setupDragAndDrop() {
+  const items = document.querySelectorAll('.record.draggable');
+  items.forEach(el => {
+    el.addEventListener('dragstart', onDragStart);
+    el.addEventListener('dragover', onDragOver);
+    el.addEventListener('drop', onDrop);
+    el.addEventListener('dragend', onDragEnd);
+  });
+}
+
+function onDragStart(e) {
+  dragSrcEl = this;
+  this.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  try { e.dataTransfer.setData('text/plain', this.dataset.id); } catch(_) {}
+}
+
+function onDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  if (this === dragSrcEl) return;
+  const rect = this.getBoundingClientRect();
+  const after = (e.clientY - rect.top) > rect.height / 2;
+  const parent = this.parentNode;
+  if (after) parent.insertBefore(dragSrcEl, this.nextSibling);
+  else parent.insertBefore(dragSrcEl, this);
+  return false;
+}
+
+function onDrop(e) { e.preventDefault(); e.stopPropagation(); return false; }
+
+async function onDragEnd() {
+  this.classList.remove('dragging');
+  // 現在のDOM順から新しい並び順を確定し、番号を振り直す
+  const els = [...document.querySelectorAll('.record.draggable')];
+  const updates = [];
+  els.forEach((el, i) => {
+    const id = parseInt(el.dataset.id);
+    const newOrder = (i + 1) * 10;
+    const rec = DB.find(x => x.id === id);
+    if (rec && rec.sort_order !== newOrder) {
+      rec.sort_order = newOrder;
+      updates.push({ id, sort_order: newOrder });
+    }
+    const numEl = el.querySelector('.record-num');
+    if (numEl) numEl.textContent = i + 1;
+  });
+  if (updates.length === 0) return;
+  setSyncStatus('loading', '並び順を保存中…');
+  try {
+    await Promise.all(updates.map(u =>
+      db.from('monuments').update({ sort_order: u.sort_order }).eq('id', u.id)
+    ));
+    setSyncStatus('ok', '同期済み ✓');
+    showToast(`並び順を保存しました ✓`);
+  } catch(err) {
+    setSyncStatus('err', 'エラー');
+    showToast('並び順の保存に失敗しました');
+    console.error(err);
+  }
 }
 
 function toggleRec(id) { document.getElementById('rec-'+id)?.classList.toggle('open'); }
@@ -494,7 +690,7 @@ async function saveRecord() {
     year: parseInt(document.getElementById('f_year').value) || null,
     nendo: document.getElementById('f_nendo').value.trim() || null,
     category: document.getElementById('f_category').value,
-    jidai: document.getElementById('f_jidai').value || null,
+    jidai: normalizeEra(document.getElementById('f_jidai').value, parseInt(document.getElementById('f_year').value) || null),
     name, basho: document.getElementById('f_basho').value.trim() || null,
     mei: document.getElementById('f_mei').value.trim() || null,
     honou: document.getElementById('f_honou').value.trim() || null,
@@ -509,6 +705,8 @@ async function saveRecord() {
       const idx = DB.findIndex(x => x.id === editingId);
       if (idx >= 0) DB[idx] = { ...DB[idx], ...rec };
     } else {
+      const maxOrder = DB.reduce((m, x) => Math.max(m, x.sort_order || 0), 0);
+      rec.sort_order = maxOrder + 10;
       const { data, error } = await db.from('monuments').insert(rec).select();
       if (error) throw error;
       DB.push(data[0]);
