@@ -949,8 +949,17 @@ function exportOne(id) {
     font-size: 14px; font-family: inherit;
     cursor: pointer;
   }
+  .close-btn {
+    position: fixed;
+    bottom: 20px; right: 150px;
+    padding: 10px 24px;
+    background: #fff; color: #1a1410;
+    border: 1px solid #1a1410; border-radius: 8px;
+    font-size: 14px; font-family: inherit;
+    cursor: pointer;
+  }
   @media print {
-    .print-btn { display: none; }
+    .print-btn, .close-btn { display: none; }
   }
 </style>
 </head>
@@ -977,6 +986,7 @@ function exportOne(id) {
     </div>
   </div>
 </div>
+<button class="close-btn" onclick="window.close()">← 閉じる</button>
 <button class="print-btn" onclick="window.print()">🖨 印刷する</button>
 </body>
 </html>`;
