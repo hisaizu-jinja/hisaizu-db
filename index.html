@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;600;700&family=Noto+Sans+JP:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 :root {
   --c-bg: #f5f2ee; --c-surface: #ffffff; --c-sidebar: #1e1a16;
@@ -32,6 +33,8 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--c-bg); color: 
 .btn-search:hover { filter: brightness(1.15); }
 .btn-add-header { background: transparent; border: 1px solid rgba(154,120,48,0.6); color: #d4a853; border-radius: 5px; padding: 7px 14px; font-size: 13px; font-family: inherit; cursor: pointer; white-space: nowrap; }
 .btn-add-header:hover { background: rgba(154,120,48,0.15); }
+.btn-backup-header { background: transparent; border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.75); border-radius: 5px; padding: 7px 14px; font-size: 13px; font-family: inherit; cursor: pointer; white-space: nowrap; }
+.btn-backup-header:hover { background: rgba(255,255,255,0.1); color: #fff; }
 
 /* ===== LAYOUT ===== */
 .layout { display: flex; margin-top: var(--header-h); min-height: calc(100vh - var(--header-h)); }
@@ -107,6 +110,7 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--c-bg); color: 
   .logo { font-size: 13px; }
   .header-search { max-width: none; }
   .btn-search { display: none; }
+  .btn-backup-header { display: none; }
   .btn-add-header { padding: 6px 10px; font-size: 12px; }
   .sidebar { display: none; }
   .layout { flex-direction: column; }
@@ -223,6 +227,7 @@ body { font-family: 'Noto Sans JP', sans-serif; background: var(--c-bg); color: 
   </div>
   <button class="btn-search" onclick="render()">検索</button>
   <button class="btn-add-header" onclick="openModal()">＋ 新規追加</button>
+  <button class="btn-backup-header" onclick="exportExcel()" title="全データをExcelファイルに書き出します">📥 Excelでバックアップ</button>
 </header>
 
 <div class="layout">
@@ -830,6 +835,52 @@ function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ===== Excelバックアップ（全データ書き出し） =====
+function exportExcel() {
+  if (!DB || DB.length === 0) { showToast('データがありません'); return; }
+  try {
+    // 時代→年代順に並べてから書き出す
+    const rows = [...DB].sort((a,b) => {
+      const ea = ERA_ORDER.indexOf(a.jidai), eb = ERA_ORDER.indexOf(b.jidai);
+      const ia = ea < 0 ? ERA_ORDER.length : ea, ib = eb < 0 ? ERA_ORDER.length : eb;
+      if (ia !== ib) return ia - ib;
+      return (a.year||9999) - (b.year||9999);
+    }).map((r, i) => ({
+      '通番': i + 1,
+      '西暦': r.year || '',
+      '和暦': r.nendo || '',
+      '成立時代': r.jidai || '',
+      '種類': r.category || '',
+      '名称': r.name || '',
+      '場所': r.basho || '',
+      '銘文': r.mei || '',
+      '奉納者・関係者': r.honou || '',
+      '備考・石工・寸法': r.biko || '',
+      '写真枚数': (r.photos || []).length,
+      '写真URL': (r.photos || []).join('\n'),
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+    // 列幅を見やすく調整
+    ws['!cols'] = [
+      { wch: 5 }, { wch: 6 }, { wch: 14 }, { wch: 10 }, { wch: 14 },
+      { wch: 22 }, { wch: 18 }, { wch: 40 }, { wch: 30 }, { wch: 40 },
+      { wch: 8 }, { wch: 50 },
+    ];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '石碑データ');
+
+    // ファイル名に日付を入れる（例: 久伊豆神社_石碑データ_20260704.xlsx）
+    const d = new Date();
+    const ymd = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+    XLSX.writeFile(wb, `久伊豆神社_石碑データ_${ymd}.xlsx`);
+    showToast(`Excelを書き出しました（${rows.length}件）✓`);
+  } catch(e) {
+    console.error('Excel export error:', e);
+    showToast('Excel書き出しに失敗しました');
+  }
 }
 
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); closeLightbox(); } });
